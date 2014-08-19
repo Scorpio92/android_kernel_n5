@@ -966,7 +966,7 @@ static int msm_hsusb_vbus_power(bool on)
 	}
 	gpio_direction_output(GPIO_VREG_OTG_EN, !!on);
 	gpio_free(GPIO_VREG_OTG_EN);
-	#if 0//a10???gpio
+	#if 0//a10ÎÞ´Ëgpio
 	rc = gpio_request(GPIO_HOST_EN, "vreg_otg_en");
 	if (rc < 0) {
 		pr_err("failed to request GPIO\n");
@@ -4474,3 +4474,4 @@ MACHINE_START(MPQ8064_DTV, "QCT MPQ8064 DTV")
 	.init_very_early = apq8064_early_reserve,
 	.restart = msm_restart,
 MACHINE_END
+
