@@ -61,18 +61,6 @@ struct logger_reader {
 	int			r_ver;	/* reader ABI version */
 };
 
-//ZTEBSP wangbing, for kernel log 20130121 +++
-/* passing applog_dis=true  to take effect on subsequent app print */
-static int  app_log_dis=0;
-static int __init early_applog_param(char *opt)
-{
-	if (!strcmp(opt, "true"))
-		app_log_dis = 1;
-	return 0;
-}
-early_param("applog_dis", early_applog_param);
-//ZTEBSP wangbing, for kernel log 20130121 ---
-
 /* logger_offset - returns index 'n' into the log via (optimized) modulus */
 size_t logger_offset(struct logger_log *log, size_t n)
 {
@@ -779,26 +767,21 @@ static int __init logger_init(void)
 {
 	int ret;
 
-//ZTEBSP wangbing, for kernel log 20130121
-	if (app_log_dis)
-		ret = 0;
-	else {
-		ret = init_log(&log_main);
-		if (unlikely(ret))
-			goto out;
+	ret = init_log(&log_main);
+	if (unlikely(ret))
+		goto out;
 
-		ret = init_log(&log_events);
-		if (unlikely(ret))
-			goto out;
+	ret = init_log(&log_events);
+	if (unlikely(ret))
+		goto out;
 
-		ret = init_log(&log_radio);
-		if (unlikely(ret))
-			goto out;
+	ret = init_log(&log_radio);
+	if (unlikely(ret))
+		goto out;
 
-		ret = init_log(&log_system);
-		if (unlikely(ret))
-			goto out;
-	}
+	ret = init_log(&log_system);
+	if (unlikely(ret))
+		goto out;
 
 out:
 	return ret;

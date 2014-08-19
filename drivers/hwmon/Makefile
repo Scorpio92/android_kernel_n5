@@ -130,6 +130,38 @@ obj-$(CONFIG_SENSORS_WPCE775X)	+= wpce775x.o
 obj-$(CONFIG_SENSORS_MSM_ADC)	+= msm_adc.o m_adcproc.o
 obj-$(CONFIG_SENSORS_PM8XXX_ADC)	+= pm8xxx-adc.o pm8xxx-adc-scale.o
 obj-$(CONFIG_SENSORS_EPM_ADC)	+= epm_adc.o
+obj-$(CONFIG_SENSORS_QPNP_ADC_VOLTAGE)	+= qpnp-adc-voltage.o qpnp-adc-common.o
+obj-$(CONFIG_SENSORS_QPNP_ADC_CURRENT)	+= qpnp-adc-current.o qpnp-adc-common.o
+
+############################################################################### SENSORS_G-SENSOR START
+obj-$(CONFIG_ZTEMT_SENSORS_G_SENSOR_KXTIK)      += kxtik.o
+obj-$(CONFIG_ZTEMT_SENSORS_G_SENSOR_LSM330D)    += lsm330dlc_acc.o
+############################################################################### SENSORS_G-SENSOR END
+
+############################################################################### SENSORS_COMPASS  START
+obj-$(CONFIG_ZTEMT_SENSORS_COMPASS_AKM8963)   += akm8963.o
+############################################################################### SENSORS_COMPASS  END
+
+############################################################################### SENSORS_ALS_PS   START
+obj-$(CONFIG_ZTEMT_SENSORS_ALS_PS_TMD2771)    += tmd2771.o
+obj-$(CONFIG_ZTEMT_SENSORS_ALS_PS_TMD2772)    += tmd2772.o
+obj-$(CONFIG_ZTEMT_SENSORS_ALS_PS_TMD2772_MINI2)    += tmd2772-mini2.o
+############################################################################### SENSORS_ALS_PS   END
+
+############################################################################### SENSORS_GYRO     START
+obj-$(CONFIG_ZTEMT_SENSORS_GYRO_LSM330D)      += lsm330dlc_gyr.o
+############################################################################### SENSORS_GYRO     END
+
+############################################################################### SENSORS_GYRO     START
+obj-$(CONFIG_ZTEMT_SENSORS_PRESS_LPS331AP)    += sensor_press_st_lps331ap.o
+############################################################################### SENSORS_GYRO     END
+
+############################################################################### VIBRATOR     START
+obj-$(CONFIG_ZTEMT_VIBRATOR_DRV2605)          += drv2605.o
+############################################################################### VIBRATOR     END
+#ZTEMT ADD by wangshuai
+obj-$(CONFIG_ZTEMT_BREATH_LED)      += aw_9106b.o
+#ZTEMT END
 
 obj-$(CONFIG_PMBUS)		+= pmbus/
 

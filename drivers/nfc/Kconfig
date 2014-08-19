@@ -17,22 +17,17 @@ config PN544_NFC
 	  To compile this driver as a module, choose m here. The module will
 	  be called pn544.
 
-#ZTEBSP zhangbo add for ven config, start	  
-config PN544_VEN_ACTIVE_HIGH
-	bool "PN544 ven active level"
-	depends on PN544_NFC
+config NFC_PN544
+	tristate "ZTEMT NFC PN544 driver"
+	depends on I2C
+	select CRC_CCITT
 	default n
 	---help---
-	  Say yes if you pn544 ven gpio is active high
-	  
-config PN544_VEN_ACTIVE_LOW
-	bool "PN544 ven active level"
-	depends on PN544_NFC
-	default n
-	---help---
-	  Say yes if you pn544 ven gpio is active low
-#ZTEBSP zhangbo add for ven config, end
+	  Say yes if you want ZTEMT PN544 Near Field Communication driver.
+	  This is for i2c connected version. If unsure, say N here.
 
+	  To compile this driver as a module, choose m here. The module will
+	  be called pn544.	  
 config NFC_PN533
 	tristate "NXP PN533 USB driver"
 	depends on USB
@@ -55,3 +50,10 @@ config NFC_WILINK
 	  into the kernel or say M to compile it as module.
 
 endmenu
+
+config BCM2079X
+	bool "Broadcom 2079X NFC Controller Driver"
+	depends on I2C
+	select CRC_CCITT
+	help
+	  Broadcom 2079X Near Field Communication controller support.

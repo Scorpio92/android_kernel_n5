@@ -11,20 +11,6 @@
 
 #include <linux/notifier.h>
 
-
-//wangtao P864A20 debug-dock-code begin
-#if defined(CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
-enum usb_dock_state {
-       DOCK_STATE_UNDEFINED = -1,
-	DOCK_STATE_UNATTACH = 0,
-       DOCK_STATE_ATTACHED,
-       DOCK_STATE_CONNECTED,
-       DOCK_STATE_REMOVING,
-};
-#endif
-//wangtao P864A20 debug-dock-code end
-
-
 /* OTG defines lots of enumeration states before device reset */
 enum usb_otg_state {
 	OTG_STATE_UNDEFINED = 0,

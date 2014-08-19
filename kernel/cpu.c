@@ -30,6 +30,11 @@ void cpu_maps_update_begin(void)
 	mutex_lock(&cpu_add_remove_lock);
 }
 
+int cpu_maps_is_updating(void)
+{
+	return mutex_is_locked(&cpu_add_remove_lock);
+}
+
 void cpu_maps_update_done(void)
 {
 	mutex_unlock(&cpu_add_remove_lock);
@@ -532,9 +537,7 @@ cpu_hotplug_pm_callback(struct notifier_block *nb,
 
 	case PM_POST_SUSPEND:
 	case PM_POST_HIBERNATION:
-
 		cpu_hotplug_enable_after_thaw();
-
 		break;
 
 	default:

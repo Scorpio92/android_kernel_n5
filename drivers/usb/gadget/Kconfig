@@ -1072,6 +1072,15 @@ config MODEM_SUPPORT
 	  adds CDC class requests to configure MODEM line settings.
 	  Say "y" to enable MODEM support in the generic serial driver.
 
+config ZTEMT_MODEM_SUPPORT
+	boolean "ZTEMT modem support in generic serial function driver"
+	depends on USB_G_ANDROID
+	default y
+	help
+          This feature enables the zte modem functionality in the
+	  generic serial.
+	  Say "y" to enable MODEM support in the generic serial driver.
+
 config RMNET_SMD_CTL_CHANNEL
 	string "RMNET control SMD channel name"
 	depends on USB_G_ANDROID && MSM_SMD
@@ -1132,4 +1141,28 @@ config USB_ANDROID_RMNET_CTRL_SMD
 	 transfers. This option enables only control interface.
 	 Data interface used is BAM.
 
+config USB_ANDROID_CDC_ECM
+	boolean "Android Gadget support CDC ECM"
+	depends on USB_G_ANDROID
+	default n
+	help
+	  Android Gadget USB support CDC ECM instead of RNDIS
+
+config ZTEMT_CDROM_AUTORUN
+	boolean "ZTEMT_CDROM_AUTORUN in generic UMS driver for PC driver"
+	depends on USB_G_ANDROID
+	default y
+	help
+          This feature enables the cdrom-autorun functionality in the
+	  generic UMS.
+	  Say "y" to enable cdrom autorun support in the generic UMS driver.
+	  
+config ZTEMT_TWO_STOR_LUN
+	boolean "ZTEMT_TWO_STOR_LUN in generic UMS driver for TWO storage disk"
+	depends on USB_G_ANDROID
+	default n
+	help
+          This feature enables the two storage disk functionality in the
+	  generic UMS.
+	  Say "y" to enable cdrom autorun support in the generic UMS driver.
 endif # USB_GADGET

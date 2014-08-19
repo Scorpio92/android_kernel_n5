@@ -43,9 +43,6 @@
 #include <linux/rculist.h>
 
 #include <asm/uaccess.h>
-//zte-modify,zhangbo,20120228,add time info in kernel log,begin
-#include <linux/rtc.h>
-//zte-modify,zhangbo,20120228,add time info in kernel log,end
 
 #include <mach/msm_rtb.h>
 #define CREATE_TRACE_POINTS
@@ -773,18 +770,6 @@ static int have_callable_console(void)
 	return 0;
 }
 
-//ZTEBSP wangbing, for kernel log 20130107 +++
-/* passing log_dis=true  to take effect on subsequent printk print */
-static int  log_dis;
-static int __init early_log_param(char *opt)
-{
-	if (!strcmp(opt, "true"))
-		log_dis = 1;
-	return 0;
-}
-early_param("log_dis", early_log_param);
-//ZTEBSP wangbing, for kernel log 20130107 ---
-
 /**
  * printk - print a kernel message
  * @fmt: format string
@@ -810,9 +795,7 @@ early_param("log_dis", early_log_param);
 asmlinkage int printk(const char *fmt, ...)
 {
 	va_list args;
-	int r=0;
-//ZTEBSP wangbing, for kernel log 20130107
-if(!log_dis) {
+	int r;
 #ifdef CONFIG_MSM_RTB
 	void *caller = __builtin_return_address(0);
 
@@ -830,7 +813,7 @@ if(!log_dis) {
 	va_start(args, fmt);
 	r = vprintk(fmt, args);
 	va_end(args);
-} 	
+
 	return r;
 }
 
@@ -916,14 +899,6 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 	size_t plen;
 	char special;
 
-//zte-modify,zhangbo,20120228,add time info in kernel log,begin	
-	struct timespec ts;
-	struct rtc_time tm;
-//zte-modify,zhangbo,20120228,add time info in kernel log,end
-
-
-//ZTEBSP wangbing, for kernel log 20130107
-if(!log_dis) {
 	boot_delay_msec();
 	printk_delay();
 
@@ -964,6 +939,9 @@ if(!log_dis) {
 
 
 	p = printk_buf;
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	store_crash_log(p);
+#endif
 
 	/* Read log level and handle special printk prefix */
 	plen = log_prefix(p, &current_log_level, &special);
@@ -1016,23 +994,10 @@ if(!log_dis) {
 
 				t = cpu_clock(printk_cpu);
 				nanosec_rem = do_div(t, 1000000000);
-				
-				//zte-modify,zhangbo,20120228,add time info in kernel log,begin
-				if(t <15)
-				{
-				    tlen = sprintf(tbuf, "[%5lu.%06lu] ",
+				tlen = sprintf(tbuf, "[%5lu.%06lu] ",
 						(unsigned long) t,
 						nanosec_rem / 1000);
-				}
-				else
-				{				
-				    getnstimeofday(&ts);					
-					rtc_time_to_tm(ts.tv_sec, &tm);
-				    tlen = sprintf(tbuf, "[%02d-%02d %02d:%02d:%02d.%03d] ",
-						 tm.tm_mon + 1, tm.tm_mday,tm.tm_hour, tm.tm_min, tm.tm_sec, (int)ts.tv_nsec/1000000);
-				}
-				//zte-modify,zhangbo,20120228,add time info in kernel log,begin
-				
+
 				for (tp = tbuf; tp < tbuf + tlen; tp++)
 					emit_log_char(*tp);
 				printed_len += tlen;
@@ -1063,7 +1028,7 @@ if(!log_dis) {
 	lockdep_on();
 out_restore_irqs:
 	local_irq_restore(flags);
-	}
+
 	return printed_len;
 }
 EXPORT_SYMBOL(printk);
@@ -1107,32 +1072,15 @@ static int __add_preferred_console(char *name, int idx, char *options,
 	c->index = idx;
 	return 0;
 }
-
-//ZTEBSP wangbing, for kernel log 20130107 +++
-/* passing uartprint_dis=true on boot to take effect on subsequent console initialization */
-static int  uartprint_dis;
-static int __init early_console_param(char *opt)
-{
-	if (!strcmp(opt, "true"))
-		uartprint_dis = 1;
-	return 0;
-}
-early_param("uartprint_dis", early_console_param);
-
 /*
  * Set up a list of consoles.  Called from init/main.c
  */
-
-//ZTEBSP wangbing, for kernel log 20130107 ---
-
 static int __init console_setup(char *str)
 {
 	char buf[sizeof(console_cmdline[0].name) + 4]; /* 4 for index */
 	char *s, *options, *brl_options = NULL;
 	int idx;
 
-//ZTEBSP wangbing, for kernel log 20130107
-	if (!uartprint_dis) {
 #ifdef CONFIG_A11Y_BRAILLE_CONSOLE
 	if (!memcmp(str, "brl,", 4)) {
 		brl_options = "";
@@ -1174,7 +1122,6 @@ static int __init console_setup(char *str)
 
 	__add_preferred_console(buf, idx, options, brl_options);
 	console_set_on_cmdline = 1;
-	}	
 	return 1;
 }
 __setup("console=", console_setup);

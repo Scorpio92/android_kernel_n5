@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +18,7 @@
 #define VREG_CONSUMERS(_id) \
 	static struct regulator_consumer_supply vreg_consumers_##_id[]
 
+/* Regulators that are present when using either PM8921 or PM8917 */
 /*
  * Consumer specific regulator names:
  *			 regulator name		consumer dev_name
@@ -60,16 +61,26 @@ VREG_CONSUMERS(L7) = {
 VREG_CONSUMERS(L8) = {
 	REGULATOR_SUPPLY("8921_l8",		NULL),
 	REGULATOR_SUPPLY("cam_vana",		"4-001a"),
+	REGULATOR_SUPPLY("cam_vana",		"4-0010"),
 	REGULATOR_SUPPLY("cam_vana",		"4-0048"),
 	REGULATOR_SUPPLY("cam_vana",		"4-006c"),
 	REGULATOR_SUPPLY("cam_vana",		"4-0034"),
 	REGULATOR_SUPPLY("cam_vana",		"4-0020"),
-	REGULATOR_SUPPLY("cam_vana",		"4-007a"),//zhangzhao aad for mt9d115	
-	REGULATOR_SUPPLY("cam_vana",		"4-0030"),//zhangzhao aad for ov9740	
+#ifdef CONFIG_ZTEMT_CAMERA_COMMON
+	REGULATOR_SUPPLY("cam_vana",		"4-006d"),
+#endif
 };
 VREG_CONSUMERS(L9) = {
 	REGULATOR_SUPPLY("8921_l9",		NULL),
 	REGULATOR_SUPPLY("vdd",			"3-0024"),
+//# modify the power for sensor
+#ifdef CONFIG_ZTEMT_SENSORS_G_SENSOR_LSM330D
+    REGULATOR_SUPPLY("8921_l9_sensor",	"2-0018"),
+#endif
+
+#ifdef CONFIG_ZTEMT_VIRTUAL_SENSOR_DEV
+    REGULATOR_SUPPLY("8921_l9_sensor",  "2-0011"),
+#endif
 };
 VREG_CONSUMERS(L10) = {
 	REGULATOR_SUPPLY("8921_l10",		NULL),
@@ -78,24 +89,36 @@ VREG_CONSUMERS(L10) = {
 VREG_CONSUMERS(L11) = {
 	REGULATOR_SUPPLY("8921_l11",		NULL),
 	REGULATOR_SUPPLY("dsi1_avdd",		"mipi_dsi.1"),
+			//added for lcd by congshan
+	REGULATOR_SUPPLY("sharp_panel_1p8",		NULL),
 };
 VREG_CONSUMERS(L12) = {
-/*ZTEBSP yaotong 20121102 for p864a20 start*/
-#if !defined(CONFIG_PROJECT_P864A20) && !defined(CONFIG_PROJECT_P864G02)
+#ifdef CONFIG_ZTEMT_CAMERA_COMMON
+//remove the code
+#else
 	REGULATOR_SUPPLY("cam_vdig",		"4-001a"),
+	REGULATOR_SUPPLY("cam_vdig",		"4-0010"),
 	REGULATOR_SUPPLY("cam_vdig",		"4-0048"),
 	REGULATOR_SUPPLY("cam_vdig",		"4-006c"),
 	REGULATOR_SUPPLY("cam_vdig",		"4-0034"),
 	REGULATOR_SUPPLY("cam_vdig",		"4-0020"),
 #endif
-/*ZTEBSP yaotong 20121102 for p864a20 end*/
 	REGULATOR_SUPPLY("8921_l12",		NULL),
+/*added by congshan 20121008 start*/
+#ifdef CONFIG_ZTEMT_MHL_8064
+	REGULATOR_SUPPLY("mhl_panel_1p2",		NULL),
+#endif
+/*added by congshan 20121008 end*/
+};
+VREG_CONSUMERS(L13) = {
+	REGULATOR_SUPPLY("8921_l13",		NULL),
 };
 VREG_CONSUMERS(L14) = {
 	REGULATOR_SUPPLY("8921_l14",		NULL),
-	REGULATOR_SUPPLY("vreg_xoadc",      "pm8921-charger"), //zhangbo add for chg patch
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213*/
-	REGULATOR_SUPPLY("d2r_1v8",		NULL),		
+	REGULATOR_SUPPLY("vreg_xoadc",		"pm8921-charger"),
+#ifdef CONFIG_ZTEMT_USB_EHCI_MSM_HOST3
+	REGULATOR_SUPPLY("HSUSB_1p8",		"msm_ehci_host.0"),
+#endif
 };
 VREG_CONSUMERS(L15) = {
 	REGULATOR_SUPPLY("8921_l15",		NULL),
@@ -103,6 +126,7 @@ VREG_CONSUMERS(L15) = {
 VREG_CONSUMERS(L16) = {
 	REGULATOR_SUPPLY("8921_l16",		NULL),
 	REGULATOR_SUPPLY("cam_vaf",		"4-001a"),
+	REGULATOR_SUPPLY("cam_vaf",		"4-0010"),
 	REGULATOR_SUPPLY("cam_vaf",		"4-0048"),
 	REGULATOR_SUPPLY("cam_vaf",		"4-006c"),
 	REGULATOR_SUPPLY("cam_vaf",		"4-0034"),
@@ -113,30 +137,31 @@ VREG_CONSUMERS(L17) = {
 };
 VREG_CONSUMERS(L18) = {
 	REGULATOR_SUPPLY("8921_l18",		NULL),
-//[ECID:000000] ZTEBSP wanghaifei start 20121025, for P864H01
-	REGULATOR_SUPPLY("cam_dvdd",		"4-001a"),
-	REGULATOR_SUPPLY("cam_dvdd",		"4-0048"),
-	REGULATOR_SUPPLY("cam_dvdd",		"4-006c"),
-	REGULATOR_SUPPLY("cam_dvdd",		"4-0034"),
-	REGULATOR_SUPPLY("cam_dvdd",		"4-0020"),
-	REGULATOR_SUPPLY("cam_dvdd",		"4-007a"),
-	REGULATOR_SUPPLY("cam_dvdd",		"4-0030"),
-//[ECID:000000] ZTEBSP wanghaifei end 20121025, for P864H01
 };
 VREG_CONSUMERS(L21) = {
 	REGULATOR_SUPPLY("8921_l21",		NULL),
 };
 VREG_CONSUMERS(L22) = {
 	REGULATOR_SUPPLY("8921_l22",		NULL),
+#if defined( CONFIG_ZTEMT_LCD_Z5MINI)	
+/* tanyijun add for lcd avdd*/
+	REGULATOR_SUPPLY("sharp_panel_2p8",		NULL),		
+#endif	
 };
 VREG_CONSUMERS(L23) = {
 	REGULATOR_SUPPLY("8921_l23",		NULL),
 	REGULATOR_SUPPLY("pll_vdd",		"pil_qdsp6v4.1"),
 	REGULATOR_SUPPLY("pll_vdd",		"pil_qdsp6v4.2"),
+#ifdef CONFIG_ZTEMT_USB_EHCI_MSM_HOST3
+#else
 	REGULATOR_SUPPLY("HSUSB_1p8",		"msm_ehci_host.0"),
+#endif
 	REGULATOR_SUPPLY("HSUSB_1p8",		"msm_ehci_host.1"),
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213*/
-	REGULATOR_SUPPLY("lms_panel_1p8",		NULL),		
+/*added by congshan 20121008 start*/
+#ifdef CONFIG_ZTEMT_MHL_8064
+	REGULATOR_SUPPLY("mhl_panel_1p8",		NULL),
+#endif
+/*added by congshan 20121008 end*/
 };
 VREG_CONSUMERS(L24) = {
 	REGULATOR_SUPPLY("8921_l24",		NULL),
@@ -163,9 +188,9 @@ VREG_CONSUMERS(L28) = {
 };
 VREG_CONSUMERS(L29) = {
 	REGULATOR_SUPPLY("8921_l29",		NULL),
-};
-VREG_CONSUMERS(S1) = {
-	REGULATOR_SUPPLY("8921_s1",		NULL),
+#ifdef CONFIG_ZTEMT_CAMERA_COMMON
+	REGULATOR_SUPPLY("cam_vdig",		"4-006d"),
+#endif
 };
 VREG_CONSUMERS(S2) = {
 	REGULATOR_SUPPLY("8921_s2",		NULL),
@@ -195,13 +220,9 @@ VREG_CONSUMERS(S4) = {
 	REGULATOR_SUPPLY("riva_vddpx",		"wcnss_wlan.0"),
 	REGULATOR_SUPPLY("vcc_i2c",		"3-005b"),
 	REGULATOR_SUPPLY("vcc_i2c",		"3-0024"),
-/*[ECID:000000] ZTEBSP doumingming for vibrator, 20120814 end*/
-	REGULATOR_SUPPLY("vddp_isa1200",		"5-0048"),
-/*[ECID:000000] ZTEBSP doumingming for vibrator, 20120814 end*/
 	REGULATOR_SUPPLY("vddp",		"0-0048"),
 	REGULATOR_SUPPLY("hdmi_lvl_tsl",	"hdmi_msm.0"),
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213*/
-	REGULATOR_SUPPLY("d2r_1v8_pull_up",		NULL),
+	REGULATOR_SUPPLY("vdd-io",		"spi0.2"),
 };
 VREG_CONSUMERS(S5) = {
 	REGULATOR_SUPPLY("8921_s5",		NULL),
@@ -216,42 +237,43 @@ VREG_CONSUMERS(S7) = {
 };
 VREG_CONSUMERS(S8) = {
 	REGULATOR_SUPPLY("8921_s8",		NULL),
-};
-VREG_CONSUMERS(LVS1) = {
-	REGULATOR_SUPPLY("8921_lvs1",		NULL),
-	REGULATOR_SUPPLY("iris_vddio",		"wcnss_wlan.0"),
-};
-VREG_CONSUMERS(LVS2) = {
-	REGULATOR_SUPPLY("8921_lvs2",		NULL),
-	REGULATOR_SUPPLY("iris_vdddig",		"wcnss_wlan.0"),
-/*ZTEBSP  yaotong 20121102 start for 864a20 start*/	
-#if defined(CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
+#ifdef CONFIG_ZTEMT_CAMERA_COMMON
 	REGULATOR_SUPPLY("cam_vdig",		"4-001a"),
 	REGULATOR_SUPPLY("cam_vdig",		"4-0048"),
 	REGULATOR_SUPPLY("cam_vdig",		"4-006c"),
 	REGULATOR_SUPPLY("cam_vdig",		"4-0034"),
 	REGULATOR_SUPPLY("cam_vdig",		"4-0020"),
-	REGULATOR_SUPPLY("cam_vdig",		"4-0030"),
+	REGULATOR_SUPPLY("cam_vdig",		"4-0010"),	  //add for imx135
 #endif
-/*ZTEBSP  yaotong 20121102 start for 864a20 end*/	
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213*/
-	REGULATOR_SUPPLY("d2r_1v2",		NULL),		
+};
+VREG_CONSUMERS(LVS1) = {
+	REGULATOR_SUPPLY("8921_lvs1",		NULL),
+	REGULATOR_SUPPLY("iris_vddio",		"wcnss_wlan.0"),
 };
 VREG_CONSUMERS(LVS3) = {
 	REGULATOR_SUPPLY("8921_lvs3",		NULL),
 };
 VREG_CONSUMERS(LVS4) = {
 	REGULATOR_SUPPLY("8921_lvs4",		NULL),
+    //# modify the I2C power for sensor
+#ifdef CONFIG_ZTEMT_SENSORS_G_SENSOR_LSM330D
+    REGULATOR_SUPPLY("8921_vs4_sensor",  "2-0018"),
+#endif       
+#ifdef CONFIG_ZTEMT_VIRTUAL_SENSOR_DEV
+    REGULATOR_SUPPLY("8921_vs4_sensor",  "2-0011"),
+#endif
 };
 VREG_CONSUMERS(LVS5) = {
 	REGULATOR_SUPPLY("8921_lvs5",		NULL),
 	REGULATOR_SUPPLY("cam_vio",		"4-001a"),
+	REGULATOR_SUPPLY("cam_vio",		"4-0010"),
 	REGULATOR_SUPPLY("cam_vio",		"4-0048"),
 	REGULATOR_SUPPLY("cam_vio",		"4-006c"),
 	REGULATOR_SUPPLY("cam_vio",		"4-0034"),
 	REGULATOR_SUPPLY("cam_vio",		"4-0020"),
-	REGULATOR_SUPPLY("cam_vio",		"4-007a"),//zhangzhao add for mt9d115
-	REGULATOR_SUPPLY("cam_vio",		"4-0030"),//zhangzhao add for ov9740
+#ifdef CONFIG_ZTEMT_CAMERA_COMMON
+	REGULATOR_SUPPLY("cam_vio",		"4-006d"),
+#endif	
 };
 VREG_CONSUMERS(LVS6) = {
 	REGULATOR_SUPPLY("8921_lvs6",		NULL),
@@ -269,13 +291,6 @@ VREG_CONSUMERS(USB_OTG) = {
 	REGULATOR_SUPPLY("8921_usb_otg",	NULL),
 	REGULATOR_SUPPLY("vbus_otg",		"msm_otg"),
 };
-VREG_CONSUMERS(HDMI_MVS) = {
-	REGULATOR_SUPPLY("8921_hdmi_mvs",	NULL),
-	REGULATOR_SUPPLY("hdmi_mvs",		"hdmi_msm.0"),
-};
-VREG_CONSUMERS(NCP) = {
-	REGULATOR_SUPPLY("8921_ncp",		NULL),
-};
 VREG_CONSUMERS(8821_S0) = {
 	REGULATOR_SUPPLY("8821_s0",		NULL),
 	REGULATOR_SUPPLY("krait2",		"acpuclk-8064"),
@@ -284,18 +299,13 @@ VREG_CONSUMERS(8821_S1) = {
 	REGULATOR_SUPPLY("8821_s1",		NULL),
 	REGULATOR_SUPPLY("krait3",		"acpuclk-8064"),
 };
-VREG_CONSUMERS(EXT_5V) = {
-	REGULATOR_SUPPLY("ext_5v",		NULL),
-	REGULATOR_SUPPLY("ext_ddr3",		NULL),
-	REGULATOR_SUPPLY("vbus",		"msm_ehci_host.0"),
-};
 VREG_CONSUMERS(EXT_MPP8) = {
 	REGULATOR_SUPPLY("ext_mpp8",		NULL),
 	REGULATOR_SUPPLY("vbus",		"msm_ehci_host.1"),
 };
 VREG_CONSUMERS(EXT_3P3V) = {
 	REGULATOR_SUPPLY("ext_3p3v",		NULL),
-	REGULATOR_SUPPLY("vdd_io",		"spi0.2"),
+	REGULATOR_SUPPLY("vdd-phy",		"spi0.2"),
 	REGULATOR_SUPPLY("mhl_usb_hs_switch",	"msm_otg"),
 	REGULATOR_SUPPLY("lvds_vccs_3p3v",      "lvds.0"),
 	REGULATOR_SUPPLY("dsi1_vccs_3p3v",      "mipi_dsi.1"),
@@ -320,6 +330,58 @@ VREG_CONSUMERS(AVC_5V) = {
 };
 VREG_CONSUMERS(AVC_3P3V) = {
 	REGULATOR_SUPPLY("avc_3p3v",	NULL),
+};
+
+/* Regulators that are only present when using PM8921 */
+VREG_CONSUMERS(S1) = {
+	REGULATOR_SUPPLY("8921_s1",		NULL),
+};
+VREG_CONSUMERS(LVS2) = {
+	REGULATOR_SUPPLY("8921_lvs2",		NULL),
+	REGULATOR_SUPPLY("iris_vdddig",		"wcnss_wlan.0"),
+};
+VREG_CONSUMERS(HDMI_MVS) = {
+	REGULATOR_SUPPLY("8921_hdmi_mvs",	NULL),
+	REGULATOR_SUPPLY("hdmi_mvs",		"hdmi_msm.0"),
+};
+VREG_CONSUMERS(NCP) = {
+	REGULATOR_SUPPLY("8921_ncp",		NULL),
+};
+VREG_CONSUMERS(EXT_5V) = {
+	REGULATOR_SUPPLY("ext_5v",		NULL),
+	REGULATOR_SUPPLY("vbus",		"msm_ehci_host.0"),
+};
+
+/* Regulators that are only present when using PM8917 */
+VREG_CONSUMERS(8917_S1) = {
+	REGULATOR_SUPPLY("8921_s1",		NULL),
+	REGULATOR_SUPPLY("iris_vdddig",		"wcnss_wlan.0"),
+};
+VREG_CONSUMERS(L30) = {
+	REGULATOR_SUPPLY("8917_l30",		NULL),
+};
+VREG_CONSUMERS(L31) = {
+	REGULATOR_SUPPLY("8917_l31",		NULL),
+};
+VREG_CONSUMERS(L32) = {
+	REGULATOR_SUPPLY("8917_l32",		NULL),
+};
+VREG_CONSUMERS(L33) = {
+	REGULATOR_SUPPLY("8917_l33",		NULL),
+};
+VREG_CONSUMERS(L34) = {
+	REGULATOR_SUPPLY("8917_l34",		NULL),
+};
+VREG_CONSUMERS(L35) = {
+	REGULATOR_SUPPLY("8917_l35",		NULL),
+};
+VREG_CONSUMERS(L36) = {
+	REGULATOR_SUPPLY("8917_l36",		NULL),
+};
+VREG_CONSUMERS(BOOST) = {
+	REGULATOR_SUPPLY("8917_boost",		NULL),
+	REGULATOR_SUPPLY("vbus",		"msm_ehci_host.0"),
+	REGULATOR_SUPPLY("hdmi_mvs",		"hdmi_msm.0"),
 };
 
 #define PM8XXX_VREG_INIT(_id, _name, _min_uV, _max_uV, _modes, _ops, \
@@ -397,6 +459,12 @@ VREG_CONSUMERS(AVC_3P3V) = {
 		REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_STATUS, 0, 0, \
 		_always_on, _supply_regulator, 0, _enable_time, _reg_id)
 
+#define PM8XXX_BOOST(_id, _name, _always_on, _min_uV, _max_uV, _enable_time, \
+		_supply_regulator, _reg_id) \
+	PM8XXX_VREG_INIT(_id, _name, _min_uV, _max_uV, 0, \
+		REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_STATUS, 0, 0, \
+		_always_on, _supply_regulator, 0, _enable_time, _reg_id)
+
 /* Pin control initialization */
 #define PM8XXX_PC(_id, _name, _always_on, _pin_fn, _pin_ctrl, \
 		  _supply_regulator, _reg_id) \
@@ -437,8 +505,7 @@ VREG_CONSUMERS(AVC_3P3V) = {
 	{ \
 		.constraints = { \
 			.name		= _name, \
-			.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE | \
-					  REGULATOR_CHANGE_STATUS, \
+			.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE, \
 			.min_uV		= _min_uV, \
 			.max_uV		= _max_uV, \
 		}, \
@@ -595,6 +662,39 @@ msm8064_pm8921_regulator_pdata[] __devinitdata = {
 	PM8XXX_VS300(HDMI_MVS, "8921_hdmi_mvs", 0, 1,         0, "ext_5v", 3),
 };
 
+/* PM8917 regulator constraints */
+struct pm8xxx_regulator_platform_data
+msm8064_pm8917_regulator_pdata[] __devinitdata = {
+	/*
+	 *		ID   name always_on pd min_uV   max_uV   en_t supply
+	 *	system_uA reg_ID
+	 */
+	PM8XXX_NLDO1200(L26, "8921_l26", 0, 1, 375000, 1050000, 200, "8921_s7",
+		0, 1),
+	PM8XXX_LDO(L30,      "8917_l30", 0, 1, 1800000, 1800000, 200, NULL,
+		0, 2),
+	PM8XXX_LDO(L31,      "8917_l31", 0, 1, 1800000, 1800000, 200, NULL,
+		0, 3),
+	PM8XXX_LDO(L32,      "8917_l32", 0, 1, 2800000, 2800000, 200, NULL,
+		0, 4),
+	PM8XXX_LDO(L33,      "8917_l33", 0, 1, 2800000, 2800000, 200, NULL,
+		0, 5),
+	PM8XXX_LDO(L34,      "8917_l34", 0, 1, 1800000, 1800000, 200, NULL,
+		0, 6),
+	PM8XXX_LDO(L35,      "8917_l35", 0, 1, 3000000, 3000000, 200, NULL,
+		0, 7),
+	PM8XXX_LDO(L36,      "8917_l36", 0, 1, 1800000, 1800000, 200, NULL,
+		0, 8),
+
+	/*
+	 *           ID     name   always_on  min_uV   max_uV en_t supply reg_ID
+	 */
+	PM8XXX_BOOST(BOOST, "8917_boost", 0,  5000000, 5000000, 500, NULL, 9),
+
+	/*	     ID        name      always_on pd en_t supply    reg_ID */
+	PM8XXX_VS300(USB_OTG,  "8921_usb_otg",  0, 1, 0,   "8917_boost", 10),
+};
+
 static struct rpm_regulator_init_data
 apq8064_rpm_regulator_init_data[] __devinitdata = {
 	/*	ID a_on pd ss min_uV   max_uV  supply sys_uA  freq  fm  ss_fm */
@@ -603,45 +703,71 @@ apq8064_rpm_regulator_init_data[] __devinitdata = {
 	RPM_SMPS(S3, 0, 1, 1,  500000, 1150000, NULL, 100000, 4p80, NONE, NONE),
 	RPM_SMPS(S4, 1, 1, 0, 1800000, 1800000, NULL, 100000, 1p60, AUTO, AUTO),
 	RPM_SMPS(S7, 0, 0, 0, 1300000, 1300000, NULL, 100000, 3p20, NONE, NONE),
+#ifdef CONFIG_ZTEMT_CAMERA_COMMON
+#ifdef CONFIG_IMX135
+	RPM_SMPS(S8, 0, 1, 0, 1050000, 1050000, NULL,      0, 1p60, NONE, NONE),
+#else
+	RPM_SMPS(S8, 0, 1, 0, 1200000, 1200000, NULL,      0, 1p60, NONE, NONE),
+#endif	
+#else
 	RPM_SMPS(S8, 0, 1, 0, 2200000, 2200000, NULL,      0, 1p60, NONE, NONE),
-
+#endif
 	/*	ID a_on pd ss min_uV   max_uV   supply    sys_uA init_ip */
 	RPM_LDO(L1,  1, 1, 0, 1100000, 1100000, "8921_s4",     0,  1000),
 	RPM_LDO(L2,  0, 1, 0, 1200000, 1200000, "8921_s4",     0,     0),
-	RPM_LDO(L3,  0, 1, 0, 3075000, 3075000, NULL,          0,     0),
+	RPM_LDO(L3,  0, 1, 0, 3075000, 3300000, NULL,          0,     0),
 	RPM_LDO(L4,  1, 1, 0, 1800000, 1800000, NULL,          0, 10000),
 	RPM_LDO(L5,  0, 1, 0, 2950000, 2950000, NULL,          0,     0),
 	RPM_LDO(L6,  0, 1, 0, 2950000, 2950000, NULL,          0,     0),
 	RPM_LDO(L7,  0, 1, 0, 1850000, 2950000, NULL,          0,     0),
-	RPM_LDO(L8,  0, 1, 0, 2800000, 2800000, NULL,          0,     0),
+	RPM_LDO(L8,  0, 1, 0, 2800000, 2850000, NULL,          0,     0),
 	RPM_LDO(L9,  0, 1, 0, 3000000, 3000000, NULL,          0,     0),
 	RPM_LDO(L10, 0, 1, 0, 2900000, 2900000, NULL,          0,     0),
-	RPM_LDO(L11, 0, 1, 0, 3000000, 3000000, NULL,          0,     0),
+	/* ZTEMT Added by congshan, 2012/12/25 */
+	//RPM_LDO(L11, 0, 1, 0, 3000000, 3000000, NULL,          0,     0),
+	RPM_LDO(L11, 0, 1, 0, 1800000, 1800000, NULL,          0,     0),
+	/* ZTEMT END */
 	RPM_LDO(L12, 0, 1, 0, 1200000, 1200000, "8921_s4",     0,     0),
+	RPM_LDO(L13, 0, 0, 0, 2220000, 2220000, NULL,          0,     0),
 	RPM_LDO(L14, 0, 1, 0, 1800000, 1800000, NULL,          0,     0),
 	RPM_LDO(L15, 0, 1, 0, 1800000, 2950000, NULL,          0,     0),
 	RPM_LDO(L16, 0, 1, 0, 2800000, 2800000, NULL,          0,     0),
-	RPM_LDO(L17, 0, 1, 0, 2000000, 2000000, NULL,          0,     0),
-//[ECID:000000] ZTEBSP wanghaifei start 20121025, for P864H01
-	RPM_LDO(L18, 0, 1, 0, 1200000, 1800000, "8921_s4",     0,     0),
-//[ECID:000000] ZTEBSP wanghaifei end 20121025, for P864H01
+	/* ZTEMT Added by LiuYongfeng, 2012/9/14 Modify the range to 1.8V - 3.3V according to PMIC 8921 hw spec*/
+	//RPM_LDO(L17, 0, 1, 0, 2000000, 2000000, NULL,          0,     0),
+	RPM_LDO(L17, 0, 1, 0, 1800000, 3300000, NULL,          0,     0),
+	/* ZTEMT END */
+	RPM_LDO(L18, 0, 1, 0, 1300000, 1800000, "8921_s4",     0,     0),
 	RPM_LDO(L21, 0, 1, 0, 1050000, 1050000, NULL,          0,     0),
+#if defined( CONFIG_ZTEMT_LCD_Z5MINI)	
+/* tanyijun add for lcd avdd*/
+	RPM_LDO(L22, 0, 1, 0, 3000000, 3000000, NULL,          0,     0),	//tan yijun modify the range of l22 to 2.6~3.0
+#else
 	RPM_LDO(L22, 0, 1, 0, 2600000, 2600000, NULL,          0,     0),
+#endif
+
 	RPM_LDO(L23, 0, 1, 0, 1800000, 1800000, NULL,          0,     0),
 	RPM_LDO(L24, 0, 1, 1,  750000, 1150000, "8921_s1", 10000, 10000),
 	RPM_LDO(L25, 1, 1, 0, 1250000, 1250000, "8921_s1", 10000, 10000),
 	RPM_LDO(L27, 0, 0, 0, 1100000, 1100000, "8921_s7",     0,     0),
 	RPM_LDO(L28, 0, 1, 0, 1050000, 1050000, "8921_s7",     0,     0),
+#if defined(CONFIG_IMX132)
+	RPM_LDO(L29, 1, 1, 0, 1200000, 1200000, NULL,          0,     0),  //jing.hongliang IMX132 DVDD 1.2V
+#else
 	RPM_LDO(L29, 0, 1, 0, 2000000, 2000000, NULL,          0,     0),
-
+#endif
 	/*     ID  a_on pd ss                   supply */
 	RPM_VS(LVS1, 0, 1, 0,                   "8921_s4"),
-	RPM_VS(LVS2, 0, 1, 0,                   "8921_s1"),
 	RPM_VS(LVS3, 0, 1, 0,                   "8921_s4"),
 	RPM_VS(LVS4, 0, 1, 0,                   "8921_s4"),
 	RPM_VS(LVS5, 0, 1, 0,                   "8921_s4"),
 	RPM_VS(LVS6, 0, 1, 0,                   "8921_s4"),
 	RPM_VS(LVS7, 0, 1, 1,                   "8921_s4"),
+};
+
+static struct rpm_regulator_init_data
+apq8064_rpm_regulator_pm8921_init_data[] __devinitdata = {
+	/*     ID  a_on pd ss                   supply */
+	RPM_VS(LVS2, 0, 1, 0,                   "8921_s1"),
 
 	/*	ID a_on    ss min_uV   max_uV   supply     freq */
 	RPM_NCP(NCP, 0,    0, 1800000, 1800000, "8921_l6", 1p60),
@@ -649,6 +775,8 @@ apq8064_rpm_regulator_init_data[] __devinitdata = {
 
 int msm8064_pm8921_regulator_pdata_len __devinitdata =
 	ARRAY_SIZE(msm8064_pm8921_regulator_pdata);
+int msm8064_pm8917_regulator_pdata_len __devinitdata =
+	ARRAY_SIZE(msm8064_pm8917_regulator_pdata);
 
 #define RPM_REG_MAP(_id, _sleep_also, _voter, _supply, _dev_name) \
 	{ \
@@ -685,3 +813,53 @@ struct rpm_regulator_platform_data apq8064_rpm_regulator_pdata __devinitdata = {
 	.consumer_map		  = msm_rpm_regulator_consumer_mapping,
 	.consumer_map_len = ARRAY_SIZE(msm_rpm_regulator_consumer_mapping),
 };
+
+/* Regulators that are only present when using PM8921 */
+struct rpm_regulator_platform_data
+apq8064_rpm_regulator_pm8921_pdata __devinitdata = {
+	.init_data		  = apq8064_rpm_regulator_pm8921_init_data,
+	.num_regulators	= ARRAY_SIZE(apq8064_rpm_regulator_pm8921_init_data),
+	.version		  = RPM_VREG_VERSION_8960,
+	.vreg_id_vdd_mem	  = RPM_VREG_ID_PM8921_L24,
+	.vreg_id_vdd_dig	  = RPM_VREG_ID_PM8921_S3,
+	.requires_tcxo_workaround = true,
+};
+
+/*
+ * Fix up regulator consumer data that moves to a different regulator when
+ * PM8917 is used.
+ */
+void __init configure_apq8064_pm8917_power_grid(void)
+{
+	static struct rpm_regulator_init_data *rpm_data;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(apq8064_rpm_regulator_init_data); i++) {
+		rpm_data = &apq8064_rpm_regulator_init_data[i];
+		if (rpm_data->id == RPM_VREG_ID_PM8921_S1) {
+			rpm_data->init_data.consumer_supplies
+				= vreg_consumers_8917_S1;
+			rpm_data->init_data.num_consumer_supplies
+				= ARRAY_SIZE(vreg_consumers_8917_S1);
+		}
+
+		/*
+		 * Currently min/max voltage level for LD03 was set to 3.075V.
+		 * But some Full speed USB headsets requires higher cross over
+		 * voltage. The cross over voltage is directly proportional
+		 * to the phy 3.3V rail voltage. So modified the max voltage
+		 * level of LD03 to 3.3V. But apq8064_rpm_regulator_init_data
+		 * is shared between PM8921 and PM8917, so set max_uV back to
+		 * 3.075V for PM8917.
+		 */
+		 if (rpm_data->id == RPM_VREG_ID_PM8921_L3)
+			rpm_data->init_data.constraints.max_uV = 3075000;
+
+	}
+
+	/*
+	 * Switch to 8960_PM8917 rpm-regulator version so that TCXO workaround
+	 * is applied to PM8917 regulators L25, L26, L27, and L28.
+	 */
+	apq8064_rpm_regulator_pdata.version = RPM_VREG_VERSION_8960_PM8917;
+}

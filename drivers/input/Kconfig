@@ -139,10 +139,6 @@ config INPUT_EVDEV
 	  To compile this driver as a module, choose M here: the
 	  module will be called evdev.
 
- config INPUT_SENSOR
-	tristate "sensor sensor"
-	help
-	  sensor sensor
 config INPUT_EVBUG
 	tristate "Event debugging"
 	help
@@ -177,6 +173,11 @@ config INPUT_KEYRESET
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called keyreset.
+	  
+config ZTEMT_VIRTUAL_SENSOR_DEV
+	tristate "ztemt_virtual_sensor_dev"
+	help
+	  If you say yes here you get support for ztemt virtual sensor dev
 
 comment "Input Device Drivers"
 
@@ -191,7 +192,6 @@ source "drivers/input/tablet/Kconfig"
 source "drivers/input/touchscreen/Kconfig"
 
 source "drivers/input/misc/Kconfig"
-source "drivers/input/ti-sensor/Kconfig"
 
 endif
 

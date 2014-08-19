@@ -108,6 +108,15 @@ config INPUT_PMIC8XXX_PWRKEY
 	  To compile this driver as a module, choose M here: the
 	  module will be called pmic8xxx-pwrkey.
 
+config INPUT_ZTEMT_PWRKEY
+	bool "PMIC8XXX power key logic patch"
+	default y
+	depends on INPUT_PMIC8XXX_PWRKEY
+	help 
+	  Say Y here to fix pwk logic issue.
+
+	  If unsure, say N.
+	
 config INPUT_SPARCSPKR
 	tristate "SPARC Speaker support"
 	depends on PCI && SPARC64
@@ -646,5 +655,32 @@ config BOSCH_BMA150
         help
           If you say yes here you get support for Bosch Sensortec's
           acceleration sensors SMB380/BMA150.
+
+config STM_LIS3DH
+        tristate "STM LIS3DH acceleration sensor support"
+        depends on I2C=y
+        help
+          If you say yes here you get support for STMicroelectronics's
+          acceleration sensors LIS3DH.
+
+config BMP18X
+       tristate "BMP18X digital pressure sensor"
+       depends on (I2C ) && SYSFS
+       help
+         If you say yes here you get support for Bosch Sensortec
+	 digital pressure sensors BMP085, BMP180.
+
+         To compile this driver as a module, choose M here: the
+         module will be called bmp18x-core.
+
+config BMP18X_I2C
+       tristate "support I2C bus connection"
+       depends on BMP18X && I2C
+       help
+         Say Y here if you want to support Bosch Sensortec digital pressure
+         sensor hooked to an I2C bus.
+
+         To compile this driver as a module, choose M here: the
+         module will be called bmp18x-i2c.
 
 endif

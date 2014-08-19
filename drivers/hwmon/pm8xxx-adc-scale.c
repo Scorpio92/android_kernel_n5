@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,8 +25,34 @@
    and provided to the battery driver in the units desired for
    their framework which is 0.1DegC. True resolution of 0.1DegC
    will result in the below table size to increase by 10 times */
+#ifdef CONFIG_ZTEMT_CHARGE
 static const struct pm8xxx_adc_map_pt adcmap_btm_threshold[] = {
-/*khl modify
+	{-300, 1626},
+	{-250, 1573},
+	{-200, 1510},
+	{-150, 1438},
+	{-100, 1358},
+	{-50, 1274},
+	{0,   1188},
+	{50,  1103},
+	{100, 1022},
+	{150,  946},
+	{200,  877},
+	{250,  816},
+	{300,  763},
+	{350,  718},
+	{400,  679},
+	{450,  647},
+	{500,  619},
+	{550,  596},
+	{600,  577},
+	{650,  561},
+	{700,  548},
+	{750,  537},
+	{800,  528}
+};
+#else
+static const struct pm8xxx_adc_map_pt adcmap_btm_threshold[] = {
 	{-300,	1642},
 	{-200,	1544},
 	{-100,	1414},
@@ -110,43 +136,8 @@ static const struct pm8xxx_adc_map_pt adcmap_btm_threshold[] = {
 	{770,	213},
 	{780,	208},
 	{790,	203}
-	*/
-//khl modify OK THERM
-       { -400 ,1709 },   
-       { -350,1683 },  
-       { -300,1652 }, 
-       { -250,1616 }, 
-       { -200,1573 },   
-       {-150, 1524 },  
-       { -100,1468 },  
-       { -50,1407 },  
-       { 0,1340 },  
-       { 50,1268 },  
-       { 100,1191 },
-       { 150,1110},  
-       { 200,1027},  
-       {  250,943 },   
-       {  300,881 }, //shiyan 860   
-       {  350,818 }, //shiyan 780  
-       {  400,764 }, //shiyan 704  
-       {  450,720 },  //shiyan  632  
-       {  500,677 },  //shiyan  566 
-       {  550,505 },   
-       {  600,450 },  
-       {  650,400},   
-       { 700, 356 },   
-       {  750,316 },  
-       {  800,281 },  
-       {  850,249},  
-       {  900,222 },  
-       {  950,197 },   
-       {  1000,176},   
-       { 1050, 157},  
-       {  1100,140},  
-       {  1150,125},  
-       {  1200,112}
 };
-
+#endif
 static const struct pm8xxx_adc_map_pt adcmap_pa_therm[] = {
 	{1731,	-30},
 	{1726,	-29},
@@ -520,7 +511,9 @@ static int32_t pm8xxx_adc_map_linear(const struct pm8xxx_adc_map_pt *pts,
 
 	return 0;
 }
-
+#ifdef CONFIG_ZTEMT_CHARGE
+extern void store_batt_therm_mv(int batt_temp_mv);
+#endif
 static int32_t pm8xxx_adc_map_batt_therm(const struct pm8xxx_adc_map_pt *pts,
 		uint32_t tablesize, int32_t input, int64_t *output)
 {
@@ -562,7 +555,12 @@ static int32_t pm8xxx_adc_map_batt_therm(const struct pm8xxx_adc_map_pt *pts,
 			(pts[i].y - pts[i-1].y))+
 			pts[i-1].x);
 	}
-
+    #ifdef CONFIG_ZTEMT_CHARGE
+	if(*output > 670){
+		store_batt_therm_mv(input);
+		printk("_%s:batt_temp_mv=%d batt_temp=%lld\n",__func__,input,*output);
+	}
+	#endif
 	return 0;
 }
 

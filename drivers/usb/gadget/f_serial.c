@@ -69,6 +69,126 @@ static unsigned int no_hsic_sports;
 static unsigned int no_hsuart_sports;
 static unsigned int nr_ports;
 
+#ifdef CONFIG_ZTEMT_MODEM_SUPPORT
+enum e_sys_mode{
+	SYS_MODE_GPRS = 1,  		//mode1
+	SYS_MODE_EDGE,      		//mode2
+	SYS_MODE_UMTS,      		//mode3
+	SYS_MODE_CDMA,      		//mode4
+	SYS_MODE_CDMA_REV0, 		//mode5
+	SYS_MODE_CDMA_REVA, 		//mode6
+	SYS_MODE_CDMA_1XRTT,		//mode7
+	SYS_MODE_HSDPA,     		//mode8
+	SYS_MODE_HSUPA,     		//mode9
+	SYS_MODE_HSPA,      		//mode10
+	SYS_MODE_EVDO_B,    		//mode11
+	SYS_MODE_CDMA_REVB, 		//mode12
+	SYS_MODE_LTE,       		//mode13
+	SYS_MODE_EHRPD,     		//mode14
+	SYS_MODE_HSPA_PLUS, 		//mode15
+	SYS_MODE_NOT_DEFINE,		//mode16
+	SYS_MODE_TD_SCDMA,  		//mode17
+};
+
+struct mode_rate {
+	enum e_sys_mode mode;
+	u32 rate;
+};
+
+static struct mode_rate mode_rate_table[] = {
+	{
+		.mode = SYS_MODE_TD_SCDMA,
+		.rate = 4200000,
+	},
+	{
+		.mode = SYS_MODE_HSPA_PLUS,
+		.rate = 21000000,
+	},
+	{
+		.mode = SYS_MODE_LTE,
+		.rate = 100000000,
+	},
+	{
+		.mode = SYS_MODE_CDMA_REVB,
+		.rate = 14700000,
+	},
+	{
+		.mode = SYS_MODE_HSPA,
+		.rate = 7200000,
+	},
+	{
+		.mode = SYS_MODE_HSUPA,
+		.rate = 7200000,
+	},
+	{
+		.mode = SYS_MODE_HSDPA,
+		.rate = 7200000,
+	},
+	{
+		.mode = SYS_MODE_CDMA_1XRTT,
+		//.rate = 144000,
+		.rate =153600, //modify by chengdongsheng
+	},
+	{
+		.mode = SYS_MODE_CDMA_REVA,
+		.rate = 3100000,
+	},
+	{
+		.mode = SYS_MODE_CDMA_REV0,
+		.rate = 2400000,
+	},
+	{
+		.mode = SYS_MODE_CDMA,
+		//.rate = 153600,//modify by chengdongsheng
+		.rate = 9600,
+	},
+	{
+		.mode = SYS_MODE_UMTS,
+		.rate = 2000000,
+	},
+	{
+		.mode = SYS_MODE_EDGE,
+		.rate = 473600,
+	},
+	{
+		.mode = SYS_MODE_GPRS,
+		.rate = 171200,
+	},
+};
+
+int ztemt_get_sys_mode(int arg);
+
+static u32 ztemt_mode_to_rate(int mode) {
+	int i = 0;
+	int size = sizeof(mode_rate_table)/sizeof(struct mode_rate);
+
+	for(i = 0; i < size; i++) {
+		if(mode == mode_rate_table[i].mode) {
+			return mode_rate_table[i].rate;
+		}
+	}
+
+	return 0;
+}
+
+static int ztemt_dwDTERate_process(u32 *dwDTERate) {
+	int	mode = 0;
+	u32 rate = 0;
+
+	if(!dwDTERate)
+		return -1;
+
+	mode = ztemt_get_sys_mode(0);
+	rate = ztemt_mode_to_rate(mode);
+	if(rate) {
+		*dwDTERate = rate;
+		return 0;
+	}
+
+	return -2;
+}
+#endif
+
 static struct port_info {
 	enum transport_type	transport;
 	unsigned		port_num;
@@ -93,7 +213,7 @@ static inline struct f_gser *port_to_gser(struct gserial *p)
 	return container_of(p, struct f_gser, port);
 }
 #define GS_LOG2_NOTIFY_INTERVAL		5	/* 1 << 5 == 32 msec */
-#define GS_NOTIFY_MAXPACKET		10	/* notification + 2 bytes */
+#define GS_NOTIFY_MAXPACKET		16
 #endif
 /*-------------------------------------------------------------------------*/
 
@@ -304,7 +424,6 @@ static int gport_setup(struct usb_configuration *c)
 		ret = ghsic_ctrl_setup(no_hsic_sports, USB_GADGET_SERIAL);
 		if (ret < 0)
 			return ret;
-		return 0;
 	}
 	if (no_hsuart_sports) {
 		port_idx = ghsuart_data_setup(no_hsuart_sports,
@@ -319,8 +438,6 @@ static int gport_setup(struct usb_configuration *c)
 				port_idx++;
 			}
 		}
-
-		return 0;
 	}
 	return ret;
 }
@@ -449,6 +566,9 @@ gser_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	u16			 w_index = le16_to_cpu(ctrl->wIndex);
 	u16			 w_value = le16_to_cpu(ctrl->wValue);
 	u16			 w_length = le16_to_cpu(ctrl->wLength);
+#ifdef CONFIG_ZTEMT_MODEM_SUPPORT
+	static u8 set_flag = 1;
+#endif
 
 	switch ((ctrl->bRequestType << 8) | ctrl->bRequest) {
 
@@ -457,7 +577,10 @@ gser_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 			| USB_CDC_REQ_SET_LINE_CODING:
 		if (w_length != sizeof(struct usb_cdc_line_coding))
 			goto invalid;
-
+#ifdef CONFIG_ZTEMT_MODEM_SUPPORT
+		if(gser->port_num == 0)
+			set_flag = 1;
+#endif
 		value = w_length;
 		cdev->gadget->ep0->driver_data = gser;
 		req->complete = gser_complete_set_line_coding;
@@ -466,6 +589,12 @@ gser_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	/* GET_LINE_CODING ... return what host sent, or initial value */
 	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
 			| USB_CDC_REQ_GET_LINE_CODING:
+#ifdef CONFIG_ZTEMT_MODEM_SUPPORT
+		if(gser->port_num == 0) {
+			ztemt_dwDTERate_process(&(gser->port_line_coding.dwDTERate));
+			set_flag = 0;
+		}
+#endif
 		value = min_t(unsigned, w_length,
 				sizeof(struct usb_cdc_line_coding));
 		memcpy(req->buf, &gser->port_line_coding, value);
@@ -572,6 +701,7 @@ static void gser_disable(struct usb_function *f)
 #ifdef CONFIG_MODEM_SUPPORT
 	usb_ep_fifo_flush(gser->notify);
 	usb_ep_disable(gser->notify);
+	gser->notify->driver_data = NULL;
 #endif
 	gser->online = 0;
 }
@@ -929,13 +1059,7 @@ int gser_bind_config(struct usb_configuration *c, u8 port_num)
 	else if (port_num == 1)
 		gser->port.func.name = "nmea";
 	else
-//ztebsp zhangjing add for at,++,20121129	
-#if defined(CONFIG_USB_AT)
-		gser->port.func.name = "at";
-#else
 		gser->port.func.name = "modem2";
-#endif
-//ztebsp zhangjing add for at,--,20121129
 	gser->port.func.setup = gser_setup;
 	gser->port.connect = gser_connect;
 	gser->port.get_dtr = gser_get_dtr;
@@ -956,9 +1080,11 @@ int gser_bind_config(struct usb_configuration *c, u8 port_num)
 /**
  * gserial_init_port - bind a gserial_port to its transport
  */
-static int gserial_init_port(int port_num, const char *name)
+static int gserial_init_port(int port_num, const char *name,
+		const char *port_name)
 {
 	enum transport_type transport;
+	int ret = 0;
 
 	if (port_num >= GSERIAL_NO_PORTS)
 		return -ENODEV;
@@ -984,6 +1110,9 @@ static int gserial_init_port(int port_num, const char *name)
 		no_smd_ports++;
 		break;
 	case USB_GADGET_XPORT_HSIC:
+		ghsic_ctrl_set_port_name(port_name, name);
+		ghsic_data_set_port_name(port_name, name);
+
 		/*client port number will be updated in gport_setup*/
 		no_hsic_sports++;
 		break;
@@ -999,5 +1128,5 @@ static int gserial_init_port(int port_num, const char *name)
 
 	nr_ports++;
 
-	return 0;
+	return ret;
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2011, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -216,6 +216,12 @@ static const struct dev_pm_ops pm8xxx_vib_pm_ops = {
 };
 #endif
 
+#ifdef CONFIG_FEATURE_ZTEMT_VIBRATOR_EXTERN_FUNC
+void extern_nolinear_vibrator_enable(int time_ms)
+{
+    pm8xxx_vib_enable(&(vib_dev->timed_dev), time_ms);
+}
+#endif
 static int __devinit pm8xxx_vib_probe(struct platform_device *pdev)
 
 {

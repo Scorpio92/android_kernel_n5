@@ -109,7 +109,7 @@ static	uint8_t	dsHpdStatus = 0;
     6 - MDI_HPD  - downstream hotplug detect (DSHPD)
 */
 
-#define INTR_1_DESIRED_MASK   (BIT6 | BIT5)
+#define INTR_1_DESIRED_MASK   (BIT6)
 #define	UNMASK_INTR_1_INTERRUPTS		SiiRegWrite(REG_INTR1_MASK, INTR_1_DESIRED_MASK)
 #define	MASK_INTR_1_INTERRUPTS			SiiRegWrite(REG_INTR1_MASK, 0x00)
 //
@@ -224,7 +224,6 @@ static void Int1Isr(void)
 {
 uint8_t regIntr1;
     regIntr1 = SiiRegRead(REG_INTR1);
-    TX_DEBUG_PRINT(("zhangqi add %s Intr1=%x \n",__func__,regIntr1));
     if (regIntr1)
     {
         // Clear all interrupts coming from this register.
@@ -237,7 +236,7 @@ uint8_t regIntr1;
         	// Check if a SET_HPD came from the downstream device.
         	//
         	cbusStatus = SiiRegRead(REG_PRI_XFR_ABORT_REASON);
-			TX_DEBUG_PRINT(("zhangqi add %s cbusStatus=%x \n",__func__,cbusStatus));
+
         	// CBUS_HPD status bit
         	if(BIT6 & (dsHpdStatus ^ cbusStatus))
         	{
@@ -418,11 +417,10 @@ void SiiMhlTxDeviceIsr (void)
 				// result of a cable disconnection continue to check other interrupt
 				// sources.
 				Int5Isr();
-				TX_DEBUG_PRINT(("zhangqi add %s out int5isr and go into MhlCbusIsr\n",__func__));
+	
 				// Check for any peer messages for DCAP_CHG etc
 				// Dispatch to have the CBUS module working only once connected.
 				MhlCbusIsr();
-				TX_DEBUG_PRINT(("zhangqi add %s out MhlCbusIsr and go into Int1Isr\n",__func__));
 				Int1Isr();
 				
 			}
@@ -880,7 +878,8 @@ void SwitchToD3 (void)
 		//pinMhlConn = 1;
 		//pinUsbConn = 0;
 
-//		ForceUsbIdSwitchOpen();
+		ForceUsbIdSwitchOpen();
+		HalTimerWait(50);
 
 		//
 		// To allow RGND engine to operate correctly.
@@ -898,7 +897,7 @@ void SwitchToD3 (void)
 		// 1.8V CBUS VTH & GND threshold
 //		I2C_WriteByte(PAGE_0_0X72, 0x94, 0x64);
 
-//		ReleaseUsbIdSwitchOpen();
+		ReleaseUsbIdSwitchOpen();
 
 
 
@@ -969,14 +968,20 @@ static int Int4Isr (void)
 	{
 	    TX_DEBUG_PRINT(("Drv: int4Status: 0x%02X\n", (int) int4Status));
 	}
-
+#ifdef CONFIG_ZTEMT_MHL_8064
 	// When I2C is inoperational (D3) and a previous interrupt brought us here, do nothing.
-//ZTEBSP zhangqi add 0x95 for special
-	if(0x95 == int4Status || 0xFF == int4Status || 0x87 == int4Status|| 0x38 == int4Status)
+	if(0xFF == int4Status || 0x87 == int4Status|| 0x38 == int4Status || 0x95 == int4Status)
 	{
 		return I2C_INACCESSIBLE;
 	}
 
+#else
+	// When I2C is inoperational (D3) and a previous interrupt brought us here, do nothing.
+	if(0xFF == int4Status || 0x87 == int4Status|| 0x38 == int4Status)
+	{
+		return I2C_INACCESSIBLE;
+	}
+#endif
 	if((int4Status & BIT0)&&( POWER_STATE_D0_MHL == fwPowerState )) // SCDT Status Change
 	{
 		if (g_chipRevId < 1)

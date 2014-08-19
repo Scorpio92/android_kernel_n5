@@ -46,11 +46,6 @@
 
 #define PPP_ADDR	0xFF
 #define PPP_CTRL	0x03
-//zte modify wangpengren if not define PPP_MTU, then define PPP_MTU
-#ifndef PPP_MTU
-#define PPP_MTU       1500
-#endif
-//zte modfiy end
 
 struct header {
 	__u16	bits;
@@ -295,7 +290,7 @@ static int pppopns_connect(struct socket *sock, struct sockaddr *useraddr,
 	po->chan.hdrlen = 14;
 	po->chan.private = sk_raw;
 	po->chan.ops = &pppopns_channel_ops;
-	po->chan.mtu = PPP_MTU - 80;
+	po->chan.mtu = PPP_MRU - 80;
 	po->proto.pns.local = addr->local;
 	po->proto.pns.remote = addr->remote;
 	po->proto.pns.data_ready = sk_raw->sk_data_ready;

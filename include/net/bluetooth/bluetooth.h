@@ -1,6 +1,6 @@
 /*
    BlueZ - Bluetooth protocol stack for Linux
-   Copyright (c) 2000-2001, 2010-2012 Code Aurora Forum.  All rights reserved.
+   Copyright (c) 2000-2001, 2010-2013 The Linux Foundation. All rights reserved.
 
    Written 2000,2001 by Maxim Krasnyansky <maxk@qualcomm.com>
 
@@ -63,6 +63,7 @@ struct bt_security {
 #define BT_SECURITY_LOW		1
 #define BT_SECURITY_MEDIUM	2
 #define BT_SECURITY_HIGH	3
+#define BT_SECURITY_VERY_HIGH	4
 
 #define BT_DEFER_SETUP	7
 #define BT_FLUSHABLE	8
@@ -111,8 +112,11 @@ struct bt_power {
 
 #define BT_LE_CONN_INTERVAL_MIN		0x0006
 #define BT_LE_CONN_INTERVAL_MAX		0x0C80
-#define BT_LE_CONN_INTERVAL_MIN_DEF	0x0008
-#define BT_LE_CONN_INTERVAL_MAX_DEF	0x0100
+
+//ztemt changed by majianjiang to speed up the intialization of ble connection
+#define BT_LE_CONN_INTERVAL_MIN_DEF	0x0010
+#define BT_LE_CONN_INTERVAL_MAX_DEF	0x0020
+//ztemt end
 
 #define BT_LE_LATENCY_MAX		0x01F4
 #define BT_LE_LATENCY_DEF		0x0000

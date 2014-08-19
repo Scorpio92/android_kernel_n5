@@ -193,6 +193,15 @@ config USB_EHCI_MSM_HSIC
 	  for chip-to-chip interconnect (having maximum circuit length of
 	  10cm) as it removes the analog transceivers.
 
+config ZTEMT_USB_EHCI_MSM_HOST3
+	bool "Support for MSM on-chip EHCI USB controller# 3"
+	depends on USB_EHCI_HCD && ARCH_MSM && ARCH_APQ8064
+	default n
+	---help---
+	  Enables support for the EHCI Compliant USB Host controller# 3
+	  present on the Qualcomm chipsets.
+	  This controller is used for docking connect.
+
 config USB_EHCI_MSM_HOST4
 	bool "Support for MSM on-chip EHCI USB controller# 4"
 	depends on USB_EHCI_HCD && ARCH_MSM && ARCH_APQ8064

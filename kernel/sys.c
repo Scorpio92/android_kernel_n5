@@ -314,8 +314,20 @@ void emergency_restart(void)
 }
 EXPORT_SYMBOL_GPL(emergency_restart);
 
+#ifdef CONFIG_ZTEMT_LCD_Z5MINI2
+/*shutdown fun point,mayu add ,2013.12.2*/
+void (*zte_lcd_poweroff)(void);
+EXPORT_SYMBOL(zte_lcd_poweroff);
+#endif
+extern void zte_sharp_lcd_shutdown(void);
 void kernel_restart_prepare(char *cmd)
 {
+#ifdef CONFIG_ZTEMT_LCD_Z5MINI2
+/*shutdown fun point,mayu add ,2013.12.2*/
+  if(zte_lcd_poweroff)
+     zte_lcd_poweroff();
+#endif
+
 	blocking_notifier_call_chain(&reboot_notifier_list, SYS_RESTART, cmd);
 	system_state = SYSTEM_RESTART;
 	usermodehelper_disable();
@@ -374,8 +386,15 @@ void kernel_restart(char *cmd)
 }
 EXPORT_SYMBOL_GPL(kernel_restart);
 
+
 static void kernel_shutdown_prepare(enum system_states state)
 {
+#ifdef CONFIG_ZTEMT_LCD_Z5MINI2
+/*shutdown fun point,mayu add ,2013.12.2*/
+  if(zte_lcd_poweroff)
+     zte_lcd_poweroff();
+#endif
+
 	blocking_notifier_call_chain(&reboot_notifier_list,
 		(state == SYSTEM_HALT)?SYS_HALT:SYS_POWER_OFF, NULL);
 	system_state = state;

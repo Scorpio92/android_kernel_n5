@@ -31,9 +31,7 @@ enum {
 	DEBUG_EXPIRE = 1U << 3,
 	DEBUG_WAKE_LOCK = 1U << 4,
 };
-//[ECID:000000] ZTEBSP wanghaifei 20120703, enable wakelock debug
-//static int debug_mask = DEBUG_EXIT_SUSPEND | DEBUG_WAKEUP;
-static int debug_mask = DEBUG_EXIT_SUSPEND | DEBUG_WAKEUP | DEBUG_SUSPEND;
+static int debug_mask = DEBUG_EXIT_SUSPEND | DEBUG_WAKEUP;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define WAKE_LOCK_TYPE_MASK              (0x0f)
@@ -146,6 +144,69 @@ static int wakelock_stats_show(struct seq_file *m, void *unused)
 	spin_unlock_irqrestore(&list_lock, irqflags);
 	return 0;
 }
+#ifdef CONFIG_ZTEMT_POWER_DEBUG
+extern int msm_show_resume_irq_mask; //used to print the resume irq
+//print suspend_states
+extern int suspend_stats_debug(void);
+
+static int print_lock_state(struct wake_lock *lock)
+{
+	int lock_count = lock->stat.count;
+	int expire_count = lock->stat.expire_count;
+	ktime_t active_time = ktime_set(0, 0);
+	ktime_t total_time = lock->stat.total_time;
+	ktime_t max_time = lock->stat.max_time;
+
+	ktime_t prevent_suspend_time = lock->stat.prevent_suspend_time;
+	if (lock->flags & WAKE_LOCK_ACTIVE) {
+		ktime_t now, add_time;
+		int expired = get_expired_time(lock, &now);
+		if (!expired)
+			now = ktime_get();
+		add_time = ktime_sub(now, lock->stat.last_time);
+		lock_count++;
+		if (!expired)
+			active_time = add_time;
+		else
+			expire_count++;
+		total_time = ktime_add(total_time, add_time);
+		if (lock->flags & WAKE_LOCK_PREVENTING_SUSPEND)
+			prevent_suspend_time = ktime_add(prevent_suspend_time,
+					ktime_sub(now, last_sleep_time_update));
+		if (add_time.tv64 > max_time.tv64)
+			max_time = add_time;
+	}
+
+	return printk(
+		     "\"%s\"\t%d\t%d\t%d\t%lld\t%lld\t%lld\t%lld\t%lld\n",
+		     lock->name, lock_count, expire_count,
+		     lock->stat.wakeup_count, ktime_to_ns(active_time),
+		     ktime_to_ns(total_time),
+		     ktime_to_ns(prevent_suspend_time), ktime_to_ns(max_time),
+		     ktime_to_ns(lock->stat.last_time));
+}
+
+void wakelock_stats_show_debug( void )
+{
+	unsigned long irqflags;
+	struct wake_lock *lock;
+	int ret;
+	int type;
+
+	spin_lock_irqsave(&list_lock, irqflags);
+
+	ret = printk("name\tcount\texpire_count\twake_count\tactive_since"
+			"\ttotal_time\tsleep_time\tmax_time\tlast_change\n");
+	list_for_each_entry(lock, &inactive_locks, link)
+		ret = print_lock_state(lock);
+	for (type = 0; type < WAKE_LOCK_TYPE_COUNT; type++) {
+		list_for_each_entry(lock, &active_wake_locks[type], link)
+			ret = print_lock_state(lock);
+	}
+	spin_unlock_irqrestore(&list_lock, irqflags);
+}
+
+#endif 
 
 static void wake_unlock_stat_locked(struct wake_lock *lock, int expired)
 {
@@ -235,6 +296,45 @@ static void print_active_locks(int type)
 		}
 	}
 }
+
+#ifdef CONFIG_ZTEMT_POWER_DEBUG
+void global_print_active_locks(int type)
+{
+	struct wake_lock *lock;
+	bool print_expired = true;
+    int count = 0;
+	unsigned long irqflags;
+	
+	BUG_ON(type >= WAKE_LOCK_TYPE_COUNT);
+    //printk("____start__\n");
+	spin_lock_irqsave(&list_lock, irqflags);
+	list_for_each_entry(lock, &active_wake_locks[type], link) {
+		if (lock->flags & WAKE_LOCK_AUTO_EXPIRE) {
+			long timeout = lock->expires - jiffies;
+			if (timeout > 0)
+				printk("active wake lock %s, time left %ld\n",
+					lock->name, timeout);
+			else if (print_expired)
+				printk("wake lock %s, expired\n", lock->name);
+		} else {
+			printk("active wake lock %s\n", lock->name);
+			if (!(debug_mask & DEBUG_EXPIRE))
+				print_expired = false;
+		}
+		count++;
+		if(count>15){
+           count = 0;
+		   printk("____to_out\n");
+		   goto conut_too_large;
+		}
+			
+	}
+	conut_too_large:
+	spin_unlock_irqrestore(&list_lock, irqflags);
+    //printk("____end__\n");
+}
+#endif
+
 
 static long has_wake_lock_locked(int type)
 {
@@ -356,6 +456,13 @@ static void suspend(struct work_struct *work)
 		pr_info("suspend: enter suspend\n");
 	getnstimeofday(&ts_entry);
 	ret = pm_suspend(requested_suspend_state);
+    #ifdef CONFIG_ZTEMT_POWER_DEBUG
+        if((1==msm_show_resume_irq_mask))  //&&(3==requested_suspend_state)
+            {
+            //print suspend_states
+            suspend_stats_debug();
+            }
+    #endif
 	getnstimeofday(&ts_exit);
 
 	if (debug_mask & DEBUG_EXIT_SUSPEND) {

@@ -92,7 +92,7 @@ static int activity_stats_notifier(struct notifier_block *nb,
 			suspend_time = ktime_get_real();
 			break;
 
-		case PM_POST_SUSPEND:			
+		case PM_POST_SUSPEND:
 			suspend_time = ktime_sub(ktime_get_real(), suspend_time);
 			last_transmit = ktime_sub(last_transmit, suspend_time);
 	}

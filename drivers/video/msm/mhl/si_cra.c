@@ -275,7 +275,7 @@ void    SiiRegReadBlock ( SiiReg_t virtualAddr, uint8_t *pBuffer, uint16_t count
 		   ret =  -EIO;
 		   break;
 	   }
-	//return ret;//zhangqi add 
+	return; //ret;
 
 }
 

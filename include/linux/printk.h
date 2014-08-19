@@ -2,7 +2,6 @@
 #define __KERNEL_PRINTK__
 
 #include <linux/init.h>
-#include <mach/zte_bsp_config.h>  //ZTEBSP zhangbo add for bsp config
 
 extern const char linux_banner[];
 extern const char linux_proc_banner[];

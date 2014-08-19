@@ -868,6 +868,26 @@ config SENSORS_EPM_ADC
 	  Provides interface for measuring the current on specific power rails
 	  through the channels on ADC1158 ADC
 
+config SENSORS_QPNP_ADC_VOLTAGE
+	tristate "Support for Qualcomm QPNP Voltage ADC"
+	depends on SPMI
+	help
+	  This is the VADC arbiter driver for Qualcomm QPNP ADC Chip.
+
+	  The driver supports reading the HKADC, XOADC through the ADC AMUX arbiter.
+	  The VADC includes support for the conversion sequencer. The driver supports
+	  reading the ADC through the AMUX channels for external pull-ups simultaneously.
+
+config SENSORS_QPNP_ADC_CURRENT
+	tristate "Support for Qualcomm QPNP current ADC"
+	depends on SPMI
+	help
+	  This is the IADC driver for Qualcomm QPNP ADC Chip.
+
+	  The driver supports single mode operation to read from upto seven channel
+	  configuration that include reading the external/internal Rsense, CSP_EX,
+	  CSN_EX pair along with the gain and offset calibration.
+
 config SENSORS_PC87360
 	tristate "National Semiconductor PC87360 family"
 	depends on !PPC
@@ -1405,6 +1425,221 @@ config SENSORS_MC13783_ADC
         depends on MFD_MC13XXX
         help
           Support for the A/D converter on MC13783 and MC13892 PMIC.
+
+################################################# SENROS START
+menuconfig ZTEMT_SENSORS
+	tristate "ZTEMT ZTEMT_SENSORS"
+	default n	
+
+
+config ZTEMT_SENSORS_NUBIA_Z5
+       depends on ZTEMT_SENSORS
+	bool "nubia-z5"
+	default n
+	help
+	  choose it config to let sensors for product nubia
+
+config ZTEMT_SENSORS_NUBIA_Z5_MINI
+       depends on ZTEMT_SENSORS
+	bool "nubia-z5-mini"
+	default n
+	help
+	  choose it config to let sensors for product nubia-z5-mini
+
+config ZTEMT_SENSORS_NUBIA_Z5_MINI2
+       depends on ZTEMT_SENSORS
+	bool "nubia-z5-mini2"
+	default n
+	help
+	  choose it config to let sensors for product nubia-z5-mini2
+  
+	
+	
+if ZTEMT_SENSORS
+
+	config FEATURE_ZTEMT_SENSORS_LOG_ON
+	tristate "ZTEMT SENSORS LOG ON"
+	depends on ZTEMT_SENSORS
+	default n	
+	help 
+		If you want to enable the sensor log,
+		then choose this config 
+	
+################################################# G-SENSOR START
+menuconfig ZTEMT_SENSORS_G_SENSOR
+	tristate "ZTEMT G-SENSOR"
+	default n
+	
+if ZTEMT_SENSORS_G_SENSOR
+
+	config ZTEMT_SENSORS_G_SENSOR_KXTIK
+	tristate "KXTIK"
+	depends on I2C=y
+	help
+	  If you say yes here you get support for KXTIK's 
+	  g-sensor KXTIK
+
+	config INPUT_KXTIK_POLLED_MODE
+			tristate "KXTJ9 device driver poll mode"
+			depends on SENSORS_G_SENSOR_KXTIK && INPUT_POLLDEV
+
+	config ZTEMT_SENSORS_G_SENSOR_LSM330D
+	tristate "LSM330D"
+	depends on I2C=y
+	help
+	  If you say yes here you get support for ST's 
+	  g-sensor LSM330D
+
+	config FEATURE_ZTEMT_VIBRATOR_HAVE_MISS_EVENT
+	tristate "FEATURE_ZTEMT_VIBRATOR_HAVE_MISS_EVENT"
+	help 
+		If you want to enable the vibrator function when have miss 
+		event, then choose this config
+	depends on ZTEMT_SENSORS_G_SENSOR_LSM330D
+	
+endif 
+################################################# G-SENSOR END
+
+################################################# COMPASS START
+menuconfig ZTEMT_SENSORS_COMPASS
+	tristate "ZTEMT COMPASS"
+	default n
+
+if ZTEMT_SENSORS_COMPASS
+
+config ZTEMT_SENSORS_COMPASS_AKM8963
+	tristate "AKM8963"
+	depends on I2C=y
+	help
+	  If you say yes here you get support for AKM's 
+	  compass AKM8963
+
+	config FEATURE_ZTEMT_SENSORS_COMPASS_UES_INT_MODE
+	tristate "FEATURE_ZTEMT_SENSORS_COMPASS_UES_INT_MODE"
+	help 
+		If you want to enable the compass work with interrupt
+		mode, then choose this config
+	depends on ZTEMT_SENSORS_COMPASS_AKM8963
+	
+endif
+################################################# COMPASS END
+
+################################################# ALS_PS START
+menuconfig ZTEMT_SENSORS_ALS_PS
+	tristate "ZTEMT ALS and PS"
+	default n
+
+if ZTEMT_SENSORS_ALS_PS
+
+config ZTEMT_SENSORS_ALS_PS_TMD2771
+	tristate "TMD2771 device driver"
+	depends on ZTEMT_SENSORS_ALS_PS
+	help
+	  If you say yes here you get support for TAOS's 
+	  als ps TMD2771
+	  
+config FEATURE_ZTEMT_SENSORS_ALS_PS_TMD2771_ALS_GAIN
+	tristate "FEATURE_ZTEMT_SENSORS_ALS_PS_TMD2771_ALS_GAIN"
+	depends on ZTEMT_SENSORS_ALS_PS_TMD2771
+	help 
+		If you want to enable the als gain, then choose 
+		this config  
+		
+config ZTEMT_SENSORS_ALS_PS_TMD2772
+	tristate "TMD2772 device driver"
+	depends on ZTEMT_SENSORS_ALS_PS
+	help
+	  If you say yes here you get support for TAOS's 
+	  als ps TMD2772
+	  
+config FEATURE_ZTEMT_SENSORS_ALS_PS_TMD2772_ALS_GAIN
+	tristate "FEATURE_ZTEMT_SENSORS_ALS_PS_TMD2772_ALS_GAIN"
+	depends on ZTEMT_SENSORS_ALS_PS_TMD2772
+help 
+		If you want to enable the als gain, then choose 
+		this config
+		
+config ZTEMT_SENSORS_ALS_PS_TMD2772_MINI2
+	tristate "TMD2772 device driver for mini2"
+	depends on ZTEMT_SENSORS_ALS_PS
+	help
+	  If you say yes here you get support for TAOS's 
+	  als ps TMD2772
+
+config FEATURE_ZTEMT_SENSORS_ALS_PS_TMD2772_ALS_GAIN_MINI2
+	tristate "FEATURE_ZTEMT_SENSORS_ALS_PS_TMD2772_ALS_GAIN_MINI2"
+	depends on ZTEMT_SENSORS_ALS_PS_TMD2772_MINI2
+help 
+             If you want to enable the als gain, then choose 
+		this config
+endif
+################################################# ALS_PS END
+
+################################################# ALS_PS START
+menuconfig ZTEMT_SENSORS_GYRO
+	tristate "ZTEMT GYRO"
+	default n
+
+if ZTEMT_SENSORS_GYRO
+
+config ZTEMT_SENSORS_GYRO_LSM330D
+	tristate "LSM330D device driver"
+	depends on I2C
+	help
+	  If you say yes here you get support for ST's 
+	  gyro LSM330D
+endif
+################################################# ALS_PS END
+
+################################################# PRESS START
+menuconfig ZTEMT_SENSORS_PRESS
+	tristate "ZTEMT PRESS"
+	default n
+
+if ZTEMT_SENSORS_PRESS
+
+config ZTEMT_SENSORS_PRESS_LPS331AP
+	tristate "LPS331AP device driver"
+	depends on I2C
+	help
+	  If you say yes here you get support for ST's 
+	  press LPS331AP
+endif
+################################################# PRESS END
+
+
+
+endif 
+################################################# SENROS END
+
+################################################# VIBRATOR START
+menuconfig ZTEMT_VIBRATOR
+	tristate "ZTEMT VIBRATOR"
+	default n
+
+if ZTEMT_VIBRATOR
+
+config ZTEMT_VIBRATOR_DRV2605
+	tristate "DRV2605 device driver"
+	depends on I2C
+	help
+	  If you say yes here you get support for TI's 
+	  vibrator DRV2605
+endif
+################################################# VIBRATOR END
+# ZTEMT ADD by wangshuai
+config ZTEMT_BREATH_LED
+	bool "ZTEMT liquid led common"
+	default y
+	help
+	  ZTEMT liquid led
+
+config ZTEMT_BREATH_LED_Z5MINI
+	bool "ZTEMT liquid led Z5mini"
+	default n
+	help
+	  ZTEMT liquid led
+#ZTEMT END 
 
 if ACPI
 

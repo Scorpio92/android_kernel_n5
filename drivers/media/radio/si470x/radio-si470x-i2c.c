@@ -33,8 +33,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
-#include <media/radio_si470x.h>
-#include <linux/gpio.h>
+
 #include "radio-si470x.h"
 
 
@@ -107,7 +106,7 @@ int si470x_get_register(struct si470x_device *radio, int regnr)
 		return -EIO;
 
 	radio->registers[regnr] = __be16_to_cpu(buf[READ_INDEX(regnr)]);
-	pr_err("jiaobaocun register %d 's value is 0x%x\n",regnr,radio->registers[regnr]);
+
 	return 0;
 }
 
@@ -124,9 +123,6 @@ int si470x_set_register(struct si470x_device *radio, int regnr)
 			(void *)buf },
 	};
 
-	if(regnr == 2)
-		pr_err("jiaobaocun set register %d 's value is 0x%x\n",regnr,radio->registers[regnr]);
-	
 	for (i = 0; i < WRITE_REG_NUM; i++)
 		buf[i] = __cpu_to_be16(radio->registers[WRITE_INDEX(i)]);
 
@@ -190,37 +186,8 @@ int si470x_fops_open(struct file *file)
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
-	int reset_pin;
-	printk("jiaobaocun si470x_fops_open\n");
+
 	mutex_lock(&radio->lock);
-
-	if (radio->pdata->power_on) {
-		retval = radio->pdata->power_on(true);
-		if (retval < 0) {
-			dev_err(&radio->client->dev, "dev power on failed\n");
-			return -EINVAL;
-		}
-	}
-	reset_pin=radio->pdata->reset_pin;
-	if(reset_pin!=0){
-		printk("jiaobaocun si470x_reset_pin =%d\n",reset_pin);		
-		msleep(5);	
-		gpio_set_value(reset_pin, 1);
-	 	msleep(10);		
-      		gpio_set_value(reset_pin, 0);
-	 	msleep(10);
-       	gpio_set_value(reset_pin, 1);
-	 	msleep(10);	
-		}
-
-	if (radio->pdata->clk_enable) {
-		retval = radio->pdata->clk_enable(true);
-		if (retval < 0) {
-			dev_err(&radio->client->dev, "dev clk_enable failed\n");
-			return -EINVAL;
-		}
-	}
-	
 	radio->users++;
 
 	if (radio->users == 1) {
@@ -230,13 +197,8 @@ int si470x_fops_open(struct file *file)
 			goto done;
 
 		/* enable RDS / STC interrupt */
-#ifdef USE_INITIAL_WAY         //lichuangchuang delete
 		radio->registers[SYSCONFIG1] |= SYSCONFIG1_RDSIEN;
 		radio->registers[SYSCONFIG1] |= SYSCONFIG1_STCIEN;
-#else
-		radio->registers[SYSCONFIG1] &= ~SYSCONFIG1_RDSIEN;
-		radio->registers[SYSCONFIG1] &= ~SYSCONFIG1_STCIEN;
-#endif
 		radio->registers[SYSCONFIG1] &= ~SYSCONFIG1_GPIO2;
 		radio->registers[SYSCONFIG1] |= 0x1 << 2;
 		retval = si470x_set_register(radio, SYSCONFIG1);
@@ -255,7 +217,7 @@ int si470x_fops_release(struct file *file)
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
-	printk("jiaobaocun si470x_fops_release\n");
+
 	/* safety check */
 	if (!radio)
 		return -ENODEV;
@@ -266,22 +228,6 @@ int si470x_fops_release(struct file *file)
 		/* stop radio */
 		retval = si470x_stop(radio);
 
-	if (radio->pdata->power_on) {
-		retval = radio->pdata->power_on(false);
-	if (retval < 0) {
-			dev_err(&radio->client->dev, "dev power on failed\n");
-			return -EINVAL;
-		}
-	}
-
-	if (radio->pdata->clk_enable) {
-		retval = radio->pdata->clk_enable(false);
-		if (retval < 0) {
-			dev_err(&radio->client->dev, "dev clk_enable failed\n");
-			return -EINVAL;
-		}
-	}
-	
 	mutex_unlock(&radio->lock);
 
 	return retval;
@@ -325,37 +271,31 @@ static irqreturn_t si470x_i2c_interrupt(int irq, void *dev_id)
 	unsigned short rds;
 	unsigned char tmpbuf[3];
 	int retval = 0;
-	pr_err("jiaobaocun 1111111 si470x_i2c_interrupt\n");
+
 	/* check Seek/Tune Complete */
 	retval = si470x_get_register(radio, STATUSRSSI);
 	if (retval < 0)
 		goto end;
 
 	if (radio->registers[STATUSRSSI] & STATUSRSSI_STC)
-		{complete(&radio->completion);
-	pr_err("jiaobaocun interrupt complete(&radio->completion)\n");}
+		complete(&radio->completion);
+
 	/* safety checks */
-	if ((radio->registers[SYSCONFIG1] & SYSCONFIG1_RDS) == 0){
-		pr_err("jiaobaocun 1111111 si470x_i2c_interrupt SYSCONFIG1_RDS end\n");
+	if ((radio->registers[SYSCONFIG1] & SYSCONFIG1_RDS) == 0)
 		goto end;
-		}
+
 	/* Update RDS registers */
 	for (regnr = 1; regnr < RDS_REGISTER_NUM; regnr++) {
 		retval = si470x_get_register(radio, STATUSRSSI + regnr);
 		if (retval < 0)
-			{
-	pr_err("jiaobaocun 1111111 si470x_i2c_interrupt Update RDS registers end\n");
 			goto end;
-			}
 	}
 
 	/* get rds blocks */
 	if ((radio->registers[STATUSRSSI] & STATUSRSSI_RDSR) == 0)
-		{
-		pr_err("jiaobaocun 1111111 si470x_i2c_interrupt get rds blocks end\n");
 		/* No RDS group ready, better luck next time */
 		goto end;
-		}
+
 	for (blocknum = 0; blocknum < 4; blocknum++) {
 		switch (blocknum) {
 		default:
@@ -392,11 +332,11 @@ static irqreturn_t si470x_i2c_interrupt(int irq, void *dev_id)
 		/* copy RDS block to internal buffer */
 		memcpy(&radio->buffer[radio->wr_index], &tmpbuf, 3);
 		radio->wr_index += 3;
-pr_err("jiaobaocun radio->wr_index =%d,radio->rd_index=%d\n",radio->wr_index,radio->rd_index);
+
 		/* wrap write pointer */
 		if (radio->wr_index >= radio->buf_size)
 			radio->wr_index = 0;
-pr_err("jiaobaocun radio->wr_index =%d,radio->rd_index=%d\n",radio->wr_index,radio->rd_index);
+
 		/* check for overflow */
 		if (radio->wr_index == radio->rd_index) {
 			/* increment and wrap read pointer */
@@ -405,7 +345,7 @@ pr_err("jiaobaocun radio->wr_index =%d,radio->rd_index=%d\n",radio->wr_index,rad
 				radio->rd_index = 0;
 		}
 	}
-pr_err("jiaobaocun radio->wr_index =%d,radio->rd_index=%d\n",radio->wr_index,radio->rd_index);
+
 	if (radio->wr_index != radio->rd_index)
 		wake_up_interruptible(&radio->read_queue);
 
@@ -423,14 +363,6 @@ static int __devinit si470x_i2c_probe(struct i2c_client *client,
 	struct si470x_device *radio;
 	int retval = 0;
 	unsigned char version_warning = 0;
-	unsigned int reset_pin;
-	
-	pr_err("jiaobaocun si470x_i2c_probe\n");
-	if (!i2c_check_functionality(client->adapter,
-			I2C_FUNC_SMBUS_BYTE_DATA)) {
-		pr_err("i2c is not supported\n");
-		return -EIO;
-	}
 
 	/* private data allocation and initialization */
 	radio = kzalloc(sizeof(struct si470x_device), GFP_KERNEL);
@@ -440,36 +372,7 @@ static int __devinit si470x_i2c_probe(struct i2c_client *client,
 	}
 
 	radio->users = 0;
-	radio->pdata =client->dev.platform_data;
 	radio->client = client;
-		
-	if (radio->pdata->power_on) {
-		retval = radio->pdata->power_on(true);
-		if (retval < 0) {
-			dev_err(&client->dev, "dev power on failed\n");
-			return -EINVAL;
-		}
-	}
-	reset_pin=radio->pdata->reset_pin;
-	if(reset_pin!=0){
-		printk("jiaobaocun si470x_reset_pin =%d\n",reset_pin);		
-		msleep(5);	
-		gpio_set_value(reset_pin, 1);
-	 	msleep(10);		
-      		gpio_set_value(reset_pin, 0);
-	 	msleep(10);
-       	gpio_set_value(reset_pin, 1);
-	 	msleep(10);	
-		}
-
-	if (radio->pdata->clk_enable) {
-		retval = radio->pdata->clk_enable(true);
-		if (retval < 0) {
-			dev_err(&client->dev, "dev clk_enable failed\n");
-			return -EINVAL;
-		}
-	}
-
 	mutex_init(&radio->lock);
 
 	/* video device allocation and initialization */
@@ -518,7 +421,7 @@ static int __devinit si470x_i2c_probe(struct i2c_client *client,
 
 	/* set initial frequency */
 	si470x_set_freq(radio, 87.5 * FREQ_MUL); /* available in all regions */
-	
+
 	/* rds buffer allocation */
 	radio->buf_size = rds_buf * 3;
 	radio->buffer = kmalloc(radio->buf_size, GFP_KERNEL);
@@ -526,16 +429,14 @@ static int __devinit si470x_i2c_probe(struct i2c_client *client,
 		retval = -EIO;
 		goto err_video;
 	}
-   	
+
 	/* rds buffer configuration */
 	radio->wr_index = 0;
 	radio->rd_index = 0;
 	init_waitqueue_head(&radio->read_queue);
 
 	/* mark Seek/Tune Complete Interrupt enabled */
-#ifdef USE_INITIAL_WAY         //lichuangchuang delete
 	radio->stci_enabled = true;
-#endif
 	init_completion(&radio->completion);
 
 	retval = request_threaded_irq(client->irq, NULL, si470x_i2c_interrupt,
@@ -554,8 +455,6 @@ static int __devinit si470x_i2c_probe(struct i2c_client *client,
 	}
 	i2c_set_clientdata(client, radio);
 
-	retval = si470x_stop(radio);//lichuangchuang add for FM consumption.
-
 	return 0;
 err_all:
 	free_irq(client->irq, radio);
@@ -566,7 +465,6 @@ err_video:
 err_radio:
 	kfree(radio);
 err_initial:
-	retval = si470x_stop(radio);//lichuangchuang add for FM consumption.
 	return retval;
 }
 
@@ -594,8 +492,7 @@ static int si470x_i2c_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct si470x_device *radio = i2c_get_clientdata(client);
-	printk("lichuangchuang si470x suspend, power down");
-	return 0;//lichuangchuang add for system suspend
+
 	/* power down */
 	radio->registers[POWERCFG] |= POWERCFG_DISABLE;
 	if (si470x_set_register(radio, POWERCFG) < 0)
@@ -612,10 +509,8 @@ static int si470x_i2c_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct si470x_device *radio = i2c_get_clientdata(client);
-	printk("lichuangchuang si470x resume, power up");
-	return 0;//lichuangchuang add for system suspend
+
 	/* power up : need 110ms */
-	radio->registers[POWERCFG] &= ~POWERCFG_DISABLE;
 	radio->registers[POWERCFG] |= POWERCFG_ENABLE;
 	if (si470x_set_register(radio, POWERCFG) < 0)
 		return -EIO;
@@ -644,28 +539,7 @@ static struct i2c_driver si470x_i2c_driver = {
 	.id_table		= si470x_i2c_id,
 };
 
-//module_i2c_driver(si470x_i2c_driver);
-
-
-static int __devinit si470x_i2c_init(void)
-{
-	int ret;
-	pr_err("jiaobaocun si470x_i2c_init\n");
-	ret = i2c_add_driver(&si470x_i2c_driver);
-	if (ret != 0) {
-		printk(KERN_ERR "Failed to register si470x I2C driver: %d\n",ret);
-	}
-	return ret;
-}
-
-module_init(si470x_i2c_init);
-
-static void __exit si470x_i2c_exit(void)
-{
-	i2c_del_driver(&si470x_i2c_driver);
-}
-module_exit(si470x_i2c_exit);
-
+module_i2c_driver(si470x_i2c_driver);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR(DRIVER_AUTHOR);

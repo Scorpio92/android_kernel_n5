@@ -110,38 +110,33 @@ void vt_event_post(unsigned int event, unsigned int old, unsigned int new)
 		wake_up_interruptible(&vt_event_waitqueue);
 }
 
-//wangtao P864A20 bug-fix-suspend-crash begin
-static void __vt_event_queue(struct vt_event_wait *vw) 
-{ 
-        unsigned long flags;
-		
+static void __vt_event_queue(struct vt_event_wait *vw)
+{
+	unsigned long flags;
 	/* Prepare the event */
 	INIT_LIST_HEAD(&vw->list);
 	vw->done = 0;
 	/* Queue our event */
 	spin_lock_irqsave(&vt_event_lock, flags);
 	list_add(&vw->list, &vt_events);
-	spin_unlock_irqrestore(&vt_event_lock, flags); 
+	spin_unlock_irqrestore(&vt_event_lock, flags);
 }
-	
+
 static void __vt_event_wait(struct vt_event_wait *vw)
-{ 
-    /* Wait for it to pass */
+{
+	/* Wait for it to pass */
 	wait_event_interruptible(vt_event_waitqueue, vw->done);
 }
 
-	
-static void __vt_event_dequeue(struct vt_event_wait *vw) 
-{ 
-       unsigned long flags;
-	   
+static void __vt_event_dequeue(struct vt_event_wait *vw)
+{
+	unsigned long flags;
+
 	/* Dequeue it */
 	spin_lock_irqsave(&vt_event_lock, flags);
 	list_del(&vw->list);
 	spin_unlock_irqrestore(&vt_event_lock, flags);
-} 
-//wangtao P864A20 bug-fix-suspend-crash end
-
+}
 
 /**
  *	vt_event_wait		-	wait for an event
@@ -154,29 +149,9 @@ static void __vt_event_dequeue(struct vt_event_wait *vw)
 
 static void vt_event_wait(struct vt_event_wait *vw)
 {
-//wangtao P864A20 bug-fix-suspend-crash begin
-#if 0
-	unsigned long flags;
-	/* Prepare the event */
-	INIT_LIST_HEAD(&vw->list);
-	vw->done = 0;
-	/* Queue our event */
-	spin_lock_irqsave(&vt_event_lock, flags);
-	list_add(&vw->list, &vt_events);
-	spin_unlock_irqrestore(&vt_event_lock, flags);
-	/* Wait for it to pass */
-	wait_event_interruptible(vt_event_waitqueue, vw->done);
-	/* Dequeue it */
-	spin_lock_irqsave(&vt_event_lock, flags);
-	list_del(&vw->list);
-	spin_unlock_irqrestore(&vt_event_lock, flags);
-#endif
-
-	__vt_event_queue(vw); 
-	__vt_event_wait(vw); 
+	__vt_event_queue(vw);
+	__vt_event_wait(vw);
 	__vt_event_dequeue(vw);
-
-//wangtao P864A20 bug-fix-suspend-crash end
 }
 
 /**
@@ -219,27 +194,14 @@ int vt_waitactive(int n)
 {
 	struct vt_event_wait vw;
 	do {
-	
-//wangtao P864A20 bug-fix-suspend-crash begin
-/*
-		if (n == fg_console + 1)
-			break;
 		vw.event.event = VT_EVENT_SWITCH;
-		vt_event_wait(&vw);
-*/
-
-             vw.event.event = VT_EVENT_SWITCH;
-
-		__vt_event_queue(&vw); 
-		if (n == fg_console + 1) { 
-			__vt_event_dequeue(&vw); 
-			break; 
-		} 
-		__vt_event_wait(&vw); 
+		__vt_event_queue(&vw);
+		if (n == fg_console + 1) {
+			__vt_event_dequeue(&vw);
+			break;
+		}
+		__vt_event_wait(&vw);
 		__vt_event_dequeue(&vw);
-
-//wangtao P864A20 bug-fix-suspend-crash end
-
 		if (vw.done == 0)
 			return -EINTR;
 	} while (vw.event.newev != n);

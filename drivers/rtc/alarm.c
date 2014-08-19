@@ -25,14 +25,6 @@
 
 #include <asm/mach/time.h>
 
-//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,start.
-extern int msmrtc_virtual_alarm_set_to_cp(struct device *dev,unsigned long seconds);
-extern int msmrtc_timeremote_clear_rtc_alarm(struct device *dev);
-extern int msmrtc_timeremote_get_rtc_alarm_status(struct device * dev);
-extern int msmrtc_rtc_read_alarm_time(struct device *dev, struct rtc_wkalrm *alarm);
-//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,end.
-
-
 #define ANDROID_ALARM_PRINT_ERROR (1U << 0)
 #define ANDROID_ALARM_PRINT_INIT_STATUS (1U << 1)
 #define ANDROID_ALARM_PRINT_TSET (1U << 2)
@@ -52,12 +44,9 @@ module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 		} \
 	} while (0)
 
-//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,start.
 #define ANDROID_ALARM_WAKEUP_MASK ( \
 	ANDROID_ALARM_RTC_WAKEUP_MASK | \
-	ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP_MASK | \
-	ANDROID_ALARM_POWEROFF_WAKEUP_MASK)
-//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,end.
+	ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP_MASK)
 
 /* support old usespace code */
 #define ANDROID_ALARM_SET_OLD               _IOW('a', 2, time_t) /* set alarm */
@@ -76,46 +65,16 @@ static struct rtc_device *alarm_rtc_dev;
 static DEFINE_SPINLOCK(alarm_slock);
 static DEFINE_MUTEX(alarm_setrtc_mutex);
 static struct wake_lock alarm_rtc_wake_lock;
-
-
 static struct platform_device *alarm_platform_dev;
 struct alarm_queue alarms[ANDROID_ALARM_TYPE_COUNT];
 static bool suspended;
 
-//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,start.
-int alarm_rpc_set(unsigned long seconds)
-{
-unsigned long alarm_time ;
-alarm_time = seconds;
-msmrtc_virtual_alarm_set_to_cp(alarm_rtc_dev->dev.parent,alarm_time);
-return 0;
-}
-
-int clear_rtc_alarm(void)
-{
-msmrtc_timeremote_clear_rtc_alarm(alarm_rtc_dev->dev.parent);
-return 0;
-}
-
-int get_rtc_alarm_status(void)
-{
-	int rtl = 0; 
-	rtl = msmrtc_timeremote_get_rtc_alarm_status(alarm_rtc_dev->dev.parent);
-	return rtl;
-}
-//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,end.
-
 static void update_timer_locked(struct alarm_queue *base, bool head_removed)
 {
 	struct alarm *alarm;
-	
-	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,start.
 	bool is_wakeup = base == &alarms[ANDROID_ALARM_RTC_WAKEUP] ||
-			base == &alarms[ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP] ||
-			base == &alarms[ANDROID_ALARM_POWEROFF_WAKEUP];
-	
-	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,end.
-	
+			base == &alarms[ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP];
+
 	if (base->stopped) {
 		pr_alarm(FLOW, "changed alarm while setting the wall time\n");
 		return;
@@ -291,25 +250,20 @@ int alarm_set_rtc(struct timespec new_time)
 	unsigned long flags;
 	struct rtc_time rtc_new_rtc_time;
 	struct timespec tmp_time;
-	
-	//printk("PM_DEBUG_MXP: Enter alarm_set_rtc.\n");
+
 	rtc_time_to_tm(new_time.tv_sec, &rtc_new_rtc_time);
-	//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,start.
-	/*printk("PM_DEBUG_MXP:set rtc %ld %ld - rtc %02d:%02d:%02d %02d/%02d/%04d\n",
+
+	pr_alarm(TSET, "set rtc %ld %ld - rtc %02d:%02d:%02d %02d/%02d/%04d\n",
 		new_time.tv_sec, new_time.tv_nsec,
 		rtc_new_rtc_time.tm_hour, rtc_new_rtc_time.tm_min,
 		rtc_new_rtc_time.tm_sec, rtc_new_rtc_time.tm_mon + 1,
 		rtc_new_rtc_time.tm_mday,
-		rtc_new_rtc_time.tm_year + 1900);*/
-	//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,end.
+		rtc_new_rtc_time.tm_year + 1900);
+
 	mutex_lock(&alarm_setrtc_mutex);
 	spin_lock_irqsave(&alarm_slock, flags);
 	wake_lock(&alarm_rtc_wake_lock);
 	getnstimeofday(&tmp_time);
-	
-	/*printk("PM_DEBUG_MXP:getnstimeofday: tmp_time.tv_sec=%ld,tmp_time.tv_nsec=%ld.\n",
-		tmp_time.tv_sec, tmp_time.tv_nsec);*/
-	
 	for (i = 0; i < ANDROID_ALARM_SYSTEMTIME; i++) {
 		hrtimer_try_to_cancel(&alarms[i].timer);
 		alarms[i].stopped = true;
@@ -336,17 +290,13 @@ int alarm_set_rtc(struct timespec new_time)
 			"alarm_set_rtc: no RTC, time will be lost on reboot\n");
 		goto err;
 	}
-	printk("PM_DEBUG_MXP: rtc time to be set: rtc_new_rtc_time.tm_year=%d, rtc_new_rtc_time.tm_mon=%d, rtc_new_rtc_time.tm_mday=%d\n",rtc_new_rtc_time.tm_year+1900,rtc_new_rtc_time.tm_mon+1,rtc_new_rtc_time.tm_mday);
-	printk("PM_DEBUG_MXP: rtc time to be set: rtc_new_rtc_time.tm_hour=%d, rtc_new_rtc_time.tm_min=%d, rtc_new_rtc_time.tm_sec=%d\n",rtc_new_rtc_time.tm_hour,rtc_new_rtc_time.tm_min,rtc_new_rtc_time.tm_sec);
 	ret = rtc_set_time(alarm_rtc_dev, &rtc_new_rtc_time);
-	//printk("PM_DEBUG_MXP: rtc_set_time ret=%d.\n",ret);
 	if (ret < 0)
 		pr_alarm(ERROR, "alarm_set_rtc: "
 			"Failed to set RTC, time will be lost on reboot\n");
 err:
 	wake_unlock(&alarm_rtc_wake_lock);
 	mutex_unlock(&alarm_setrtc_mutex);
-	//printk("PM_DEBUG_MXP: Exit alarm_set_rtc.\n");
 	return ret;
 }
 
@@ -405,12 +355,9 @@ static enum hrtimer_restart alarm_timer_triggered(struct hrtimer *timer)
 	now = base->stopped ? base->stopped_time : hrtimer_cb_get_time(timer);
 	now = ktime_sub(now, base->delta);
 
-	//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,start.
-         //pr_debug("PM_DEBUG_MXP: alarm_timer_triggered\n");
-	pr_debug("PM_DEBUG_MXP:alarm_timer_triggered type %d at %lld\n",
+	pr_alarm(INT, "alarm_timer_triggered type %d at %lld\n",
 		base - alarms, ktime_to_ns(now));
-	//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,end.
-	
+
 	while (base->first) {
 		alarm = container_of(base->first, struct alarm, node);
 		if (alarm->softexpires.tv64 > now.tv64) {
@@ -459,23 +406,15 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 	struct alarm_queue *wakeup_queue = NULL;
 	struct alarm_queue *tmp_queue = NULL;
 
-	//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,start.
- 	//printk("PM_DEBUG_MXP: Enter alarm_suspend begin to set alarm.\n");
-	//printk("PM_DEBUG_MXP: alarm_suspend(%p).\n", pdev);
-	//pr_alarm(SUSPEND, "alarm_suspend(%p, %d)\n", pdev, state.event);//enable by default
-	//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,end.
-	
+	pr_alarm(SUSPEND, "alarm_suspend(%p, %d)\n", pdev, state.event);
+
 	spin_lock_irqsave(&alarm_slock, flags);
 	suspended = true;
 	spin_unlock_irqrestore(&alarm_slock, flags);
-	
-	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,start.
+
 	hrtimer_cancel(&alarms[ANDROID_ALARM_RTC_WAKEUP].timer);
 	hrtimer_cancel(&alarms[
 			ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP].timer);
-	hrtimer_cancel(&alarms[
-			ANDROID_ALARM_POWEROFF_WAKEUP].timer);
-	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,end.
 
 	tmp_queue = &alarms[ANDROID_ALARM_RTC_WAKEUP];
 	if (tmp_queue->first)
@@ -485,22 +424,10 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 				hrtimer_get_expires(&tmp_queue->timer).tv64 <
 				hrtimer_get_expires(&wakeup_queue->timer).tv64))
 		wakeup_queue = tmp_queue;
-	
-	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,start.
-	tmp_queue = &alarms[ANDROID_ALARM_POWEROFF_WAKEUP];
-	if (tmp_queue->first && (!wakeup_queue ||
-				hrtimer_get_expires(&tmp_queue->timer).tv64 <
-				hrtimer_get_expires(&wakeup_queue->timer).tv64))
-		wakeup_queue = tmp_queue;
-	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,end.
-	
 	if (wakeup_queue) {
 		rtc_read_time(alarm_rtc_dev, &rtc_current_rtc_time);
 		getnstimeofday(&wall_time);
 		rtc_tm_to_time(&rtc_current_rtc_time, &rtc_current_time);
-		//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,start.
-		//printk("PM_DEBUG_MXP: alarm_suspend wall_time.tv_sec %ld,rtc_current_time %ld.\n",wall_time.tv_sec,rtc_current_time);
-		//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,end.
 		set_normalized_timespec(&rtc_delta,
 					wall_time.tv_sec - rtc_current_time,
 					wall_time.tv_nsec);
@@ -514,14 +441,11 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 		rtc_set_alarm(alarm_rtc_dev, &rtc_alarm);
 		rtc_read_time(alarm_rtc_dev, &rtc_current_rtc_time);
 		rtc_tm_to_time(&rtc_current_rtc_time, &rtc_current_time);
-		/*pr_alarm(SUSPEND,
+		pr_alarm(SUSPEND,
 			"rtc alarm set at %ld, now %ld, rtc delta %ld.%09ld\n",
 			rtc_alarm_time, rtc_current_time,
-			rtc_delta.tv_sec, rtc_delta.tv_nsec);*/
-		/*printk("PM_DEBUG_MXP: rtc alarm set at %ld, now %ld, rtc delta %ld.%09ld.\n",
-			rtc_alarm_time, rtc_current_time,
-			rtc_delta.tv_sec, rtc_delta.tv_nsec);*/	
-			if (rtc_current_time + 1 >= rtc_alarm_time)  {
+			rtc_delta.tv_sec, rtc_delta.tv_nsec);
+		if (rtc_current_time + 1 >= rtc_alarm_time) {
 			pr_alarm(SUSPEND, "alarm about to go off\n");
 			memset(&rtc_alarm, 0, sizeof(rtc_alarm));
 			rtc_alarm.enabled = 0;
@@ -530,17 +454,14 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 			spin_lock_irqsave(&alarm_slock, flags);
 			suspended = false;
 			wake_lock_timeout(&alarm_rtc_wake_lock, 2 * HZ);
-			//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,start.
-			update_timer_locked(&alarms[ANDROID_ALARM_RTC_WAKEUP],false);
-			update_timer_locked(&alarms[ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP], false);
-			update_timer_locked(&alarms[ANDROID_ALARM_POWEROFF_WAKEUP],	false);
-			//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,end.
-			
+			update_timer_locked(&alarms[ANDROID_ALARM_RTC_WAKEUP],
+									false);
+			update_timer_locked(&alarms[
+				ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP], false);
 			err = -EBUSY;
 			spin_unlock_irqrestore(&alarm_slock, flags);
 		}
 	}
-	//printk("PM_DEBUG_MXP: Exit from alarm_suspend.\n");
 	return err;
 }
 
@@ -548,36 +469,20 @@ static int alarm_resume(struct platform_device *pdev)
 {
 	struct rtc_wkalrm alarm;
 	unsigned long       flags;
-	//struct rtc_wkalrm   zte_rtc_alarm;//
-	//unsigned long now = get_seconds();//
-	//unsigned long zte_rtc_alarm_sec;//
-	//pr_alarm(SUSPEND, "alarm_resume(%p)\n", pdev);
-	//printk("PM_DEBUG_MXP: Enter alarm_resume.\n");
-	//printk("PM_DEBUG_MXP: now_seconds is:now_time %ld\n",now);
-	
+
+	pr_alarm(SUSPEND, "alarm_resume(%p)\n", pdev);
+
 	memset(&alarm, 0, sizeof(alarm));
 	alarm.enabled = 0;
 	rtc_set_alarm(alarm_rtc_dev, &alarm);
 
 	spin_lock_irqsave(&alarm_slock, flags);
 	suspended = false;
-	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,start.
 	update_timer_locked(&alarms[ANDROID_ALARM_RTC_WAKEUP], false);
-	update_timer_locked(&alarms[ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP],false);
-	update_timer_locked(&alarms[ANDROID_ALARM_POWEROFF_WAKEUP], false);
+	update_timer_locked(&alarms[ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP],
+									false);
 	spin_unlock_irqrestore(&alarm_slock, flags);
-	#if 0
-	//This is the test code.
-	msmrtc_rtc_read_alarm_time(&alarm_rtc_dev->dev,&zte_rtc_alarm);
-	msmrtc_rtc_read_alarm_time(alarm_rtc_dev->dev.parent,&zte_rtc_alarm);
-	rtc_tm_to_time(&zte_rtc_alarm.time, &zte_rtc_alarm_sec);//
-	//printk("PM_DEBUG_MXP: zte_rtc_alarm.pending =%d.\n",zte_rtc_alarm.pending);//
-	//printk("PM_DEBUG_MXP: zte_rtc_alarm.enabled =%d.\n",zte_rtc_alarm.enabled);//
-	printk("PM_DEBUG_MXP: zte_rtc_alarm_sec= %ld\n",zte_rtc_alarm_sec);//
-	alarm_rpc_set(zte_rtc_alarm_sec);//
-	#endif
-	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,end.
-	//printk("PM_DEBUG_MXP: Exit alarm_resume.\n");
+
 	return 0;
 }
 
@@ -671,12 +576,10 @@ static int __init alarm_driver_init(void)
 	int err;
 	int i;
 
-         printk("PM_DEBUG_MXP: Enter alarm_driver_init.\n");
 	for (i = 0; i < ANDROID_ALARM_SYSTEMTIME; i++) {
 		hrtimer_init(&alarms[i].timer,
 				CLOCK_REALTIME, HRTIMER_MODE_ABS);
 		alarms[i].timer.function = alarm_timer_triggered;
-	printk("PM_DEBUG_MXP: alarm_driver_init,i=%d\n",i);
 	}
 	hrtimer_init(&alarms[ANDROID_ALARM_SYSTEMTIME].timer,
 		     CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
@@ -689,7 +592,7 @@ static int __init alarm_driver_init(void)
 	err = class_interface_register(&rtc_alarm_interface);
 	if (err < 0)
 		goto err2;
-	printk("PM_DEBUG_MXP: Exit alarm_driver_init.\n");
+
 	return 0;
 
 err2:

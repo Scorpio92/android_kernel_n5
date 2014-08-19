@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -79,15 +79,8 @@ enum gadget_type {
 	USB_GADGET_RMNET,
 };
 
-#define NUM_RMNET_HSIC_PORTS 1
-//ztebsp zhangjing add for at,++,20121129
-#if defined(CONFIG_USB_AT)
-#define NUM_DUN_HSIC_PORTS 2   //   1//zhangjing 
-#else
-#define NUM_DUN_HSIC_PORTS 1
-#endif
-//ztebsp zhangjing add for at,--,20121129
-
+#define NUM_RMNET_HSIC_PORTS 2
+#define NUM_DUN_HSIC_PORTS 2
 #define NUM_PORTS (NUM_RMNET_HSIC_PORTS \
 	+ NUM_DUN_HSIC_PORTS)
 
@@ -99,9 +92,11 @@ enum gadget_type {
 int ghsic_ctrl_connect(void *, int);
 void ghsic_ctrl_disconnect(void *, int);
 int ghsic_ctrl_setup(unsigned int, enum gadget_type);
+void ghsic_ctrl_set_port_name(const char *, const char *);
 int ghsic_data_connect(void *, int);
 void ghsic_data_disconnect(void *, int);
 int ghsic_data_setup(unsigned int, enum gadget_type);
+void ghsic_data_set_port_name(const char *, const char *);
 
 int ghsuart_ctrl_connect(void *, int);
 void ghsuart_ctrl_disconnect(void *, int);

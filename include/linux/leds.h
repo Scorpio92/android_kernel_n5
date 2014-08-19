@@ -63,13 +63,6 @@ struct led_classdev {
 	const char		*default_trigger;	/* Trigger to use */
 
 	unsigned long		 blink_delay_on, blink_delay_off;
-/*[ECID:000000] ZTEBSP wangbing, for pm8921 led, 20120828 +++*/
-	unsigned long		 blink_delay_on_u, blink_delay_off_u;
-#ifdef CONFIG_LEDS_PM8XXX_HW_BLINK
-	atomic_t 		blink_flag;
-#endif
-/*[ECID:000000] ZTEBSP wangbing, for pm8921 led, 20120828 ---*/
-
 	struct timer_list	 blink_timer;
 	int			 blink_brightness;
 

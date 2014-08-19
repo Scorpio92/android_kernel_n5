@@ -12,6 +12,15 @@ menuconfig INPUT_KEYBOARD
 
 if INPUT_KEYBOARD
 
+config ZTEMT_CAMERA_KEY
+	bool "ZTEMT_CAMERA_KEY"
+	depends on INPUT_KEYBOARD
+	default n
+	help
+	  Say Y here if you have a ZTEMT_CAMERA_KEY
+
+	  Say N if you use a standard keyboard.
+
 config KEYBOARD_ADP5520
 	tristate "Keypad Support for ADP5520 PMIC"
 	depends on PMIC_ADP5520

@@ -374,7 +374,7 @@
 /* arch/arm/mach-msm/include/mach/memory.h
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -734,6 +734,22 @@ SECTIONS
  _etext = .; /* End of text and rodata section */
  . = ALIGN(1<<20);
  __init_begin = .;
+ /*
+	 * The vectors and stubs are relocatable code, and the
+	 * only thing that matters is their relative offsets
+	 */
+ __vectors_start = .;
+ .vectors 0 : AT(__vectors_start) {
+  *(.vectors)
+ }
+ . = __vectors_start + SIZEOF(.vectors);
+ __vectors_end = .;
+ __stubs_start = .;
+ .stubs 0x1000 : AT(__stubs_start) {
+  *(.stubs)
+ }
+ . = __stubs_start + SIZEOF(.stubs);
+ __stubs_end = .;
  . = ALIGN(8); .init.text : AT(ADDR(.init.text) - 0) { _sinittext = .; *(.init.text) *(.meminit.text) _einittext = .; }
  .exit.text : {
   *(.exit.text) *(.memexit.text)
@@ -761,6 +777,7 @@ SECTIONS
   . = ALIGN(16); __setup_start = .; *(.init.setup) __setup_end = .;
   __initcall_start = .; *(.initcallearly.init) __initcall0_start = .; *(.initcall0.init) *(.initcall0s.init) __initcall1_start = .; *(.initcall1.init) *(.initcall1s.init) __initcall2_start = .; *(.initcall2.init) *(.initcall2s.init) __initcall3_start = .; *(.initcall3.init) *(.initcall3s.init) __initcall4_start = .; *(.initcall4.init) *(.initcall4s.init) __initcall5_start = .; *(.initcall5.init) *(.initcall5s.init) __initcallrootfs_start = .; *(.initcallrootfs.init) *(.initcallrootfss.init) __initcall6_start = .; *(.initcall6.init) *(.initcall6s.init) __initcall7_start = .; *(.initcall7.init) *(.initcall7s.init) __initcall_end = .;
   __con_initcall_start = .; *(.con_initcall.init) __con_initcall_end = .;
+  __compat_exports_start = .; *(.exportcompat.init) __compat_exports_end = .;
   __security_initcall_start = .; *(.security_initcall.init) __security_initcall_end = .;
   . = ALIGN(4); __initramfs_start = .; *(.init.ramfs) . = ALIGN(8); *(.init.ramfs.info)
  }

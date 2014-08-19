@@ -37,11 +37,8 @@
 #include <media/v4l2-common.h>
 #include <media/v4l2-ioctl.h>
 #include <asm/unaligned.h>
-#include <media/radio_si470x.h>
 
 
-#define USE_INITIAL_WAY  //lichuangchuang add 
-#define SEEKTH_FM 0x0E      //lichuangchuang add 
 
 /**************************************************************************
  * Register Definitions
@@ -87,7 +84,7 @@
 
 #define SYSCONFIG2		5	/* System Configuration 2 */
 #define SYSCONFIG2_SEEKTH	0xff00	/* bits 15..08: RSSI Seek Threshold */
-#define SYSCONFIG2_BAND		0x00C0	/* bits 07..06: Band Select jiaobaocun modified */
+#define SYSCONFIG2_BAND		0x0080	/* bits 07..06: Band Select */
 #define SYSCONFIG2_SPACE	0x0030	/* bits 05..04: Channel Spacing */
 #define SYSCONFIG2_VOLUME	0x000f	/* bits 03..00: Volume */
 
@@ -184,7 +181,6 @@ struct si470x_device {
 
 #if defined(CONFIG_I2C_SI470X) || defined(CONFIG_I2C_SI470X_MODULE)
 	struct i2c_client *client;
-	struct radio_si470x_platform_data *pdata;
 #endif
 };
 

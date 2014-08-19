@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,7 +16,7 @@
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
 #include <linux/bootmem.h>
-#include <linux/ion.h>
+#include <linux/msm_ion.h>
 #include <asm/mach-types.h>
 #include <mach/msm_memtypes.h>
 #include <mach/board.h>
@@ -30,13 +30,7 @@
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 /* prim = 1366 x 768 x 3(bpp) x 3(pages) */
-#if defined  CONFIG_PROJECT_P864A10 || defined(CONFIG_PROJECT_P864H01)
 #define MSM_FB_PRIM_BUF_SIZE roundup(1920 * 1088 * 4 * 3, 0x10000)
-#elif defined (CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
-#define MSM_FB_PRIM_BUF_SIZE roundup(1920 * 1088 * 4 * 3*3, 0x10000) //zhangqi add for 1080p
-#else
-#define MSM_FB_PRIM_BUF_SIZE roundup(1920 * 1088 * 4 * 3, 0x10000)
-#endif
 #else
 /* prim = 1366 x 768 x 3(bpp) x 2(pages) */
 #define MSM_FB_PRIM_BUF_SIZE roundup(1920 * 1088 * 4 * 2, 0x10000)
@@ -68,16 +62,8 @@ static struct resource msm_fb_resources[] = {
 #define MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME "mipi_video_toshiba_wsvga"
 #define MIPI_VIDEO_CHIMEI_WXGA_PANEL_NAME "mipi_video_chimei_wxga"
 #define HDMI_PANEL_NAME "hdmi_msm"
+#define MHL_PANEL_NAME "hdmi_msm,mhl_8334"
 #define TVOUT_PANEL_NAME "tvout_msm"
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213*/
-#define MIPI_TOSHIBA_ATTRI_PANEL_NAME  "mipi_video_attri_wxga"
-/*[ECID:000000] ZTEBSP wangbing, for orise lcd, 20120823*/
-#define MIPI_ORISE_720P_PANEL_NAME  "mipi_video_orise_720p"
-#define MIPI_ORISE_LEAD_720P_PANEL_NAME  "mipi_video_orise_lead_720p"
-#define MIPI_ORISE_BOE_720P_PANEL_NAME  "mipi_video_orise_boe_720p"
-#define MIPI_ORISE_CPT_720P_PANEL_NAME  "mipi_video_orise_cpt_720p"
-
-#define MIPI_SHARP_1080P_PANEL_NAME  "mipi_video_sharp_1080p"
 
 #define LVDS_PIXEL_MAP_PATTERN_1	1
 #define LVDS_PIXEL_MAP_PATTERN_2	2
@@ -88,41 +74,23 @@ static unsigned char hdmi_is_primary = 1;
 static unsigned char hdmi_is_primary;
 #endif
 
+static unsigned char mhl_display_enabled;
+
 unsigned char apq8064_hdmi_as_primary_selected(void)
 {
 	return hdmi_is_primary;
 }
 
-static void set_mdp_clocks_for_wuxga(void);
-
-//[ECID:000000] ZTEBSP zhangqi add begin
-typedef enum {
-	LCD_PANEL_NOPANEL,
-       OTM1283_BOE_HD_LCM,	//P864A10
-       OTM1283_LEAD_HD_LCM,	//P864A10
-       OTM1283_CPT_HD_LCM,	//P864A10
-       E63311_SHARP_FHD_LCM,//P864A20
-	LCD_PANEL_MAX
-} LCD_PANEL_ID;
- int lcd_enum;
-
-static int __init panel_num_setup(char *str)
+unsigned char apq8064_mhl_display_enabled(void)
 {
-	int cal = simple_strtol(str, NULL, 0);
-	printk("zhangqi add for logo panel_num=%d \n",cal);
-	lcd_enum = cal;
-	return 1;
+	return mhl_display_enabled;
 }
 
-__setup("panel=", panel_num_setup);
+static void set_mdp_clocks_for_wuxga(void);
 
-//[ECID:000000] ZTEBSP zhangqi add end
 static int msm_fb_detect_panel(const char *name)
 {
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 start*/
-	//u32 version;
-
-#if 0
+	u32 version;
 	if (machine_is_apq8064_liquid()) {
 		version = socinfo_get_platform_version();
 		if ((SOCINFO_VERSION_MAJOR(version) == 1) &&
@@ -155,45 +123,6 @@ static int msm_fb_detect_panel(const char *name)
 			return 0;
 		}
 	}
-#else
-/*[ECID:000000] ZTEBSP wangbing, for orise lcd, 20120823*/
-#if defined(CONFIG_PROJECT_P864A10) || defined(CONFIG_PROJECT_P864H01)
-	switch (lcd_enum)
-	{
-		case OTM1283_BOE_HD_LCM : 
-			if (!strncmp(name, MIPI_ORISE_BOE_720P_PANEL_NAME,strnlen(MIPI_ORISE_BOE_720P_PANEL_NAME,PANEL_NAME_MAX_LEN)))
-				return 0;
-			break;
-		case OTM1283_LEAD_HD_LCM : 
-			if (!strncmp(name, MIPI_ORISE_LEAD_720P_PANEL_NAME,strnlen(MIPI_ORISE_LEAD_720P_PANEL_NAME,PANEL_NAME_MAX_LEN)))
-				return 0;
-			break ;
-		case OTM1283_CPT_HD_LCM : 
-			if (!strncmp(name, MIPI_ORISE_CPT_720P_PANEL_NAME,strnlen(MIPI_ORISE_CPT_720P_PANEL_NAME,PANEL_NAME_MAX_LEN)))
-				return 0;
-			break ;
-		 default :
-			if (!strncmp(name, MIPI_ORISE_LEAD_720P_PANEL_NAME,strnlen(MIPI_ORISE_LEAD_720P_PANEL_NAME,PANEL_NAME_MAX_LEN)))
-				return 0;
-		 	printk("%s no match panel detected\n",__func__);
-			break ;
-	}
-#elif defined (CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
-	if (!strncmp(name, MIPI_SHARP_1080P_PANEL_NAME,
-			strnlen(MIPI_SHARP_1080P_PANEL_NAME,
-				PANEL_NAME_MAX_LEN)))
-		return 0;
-
-	//if (!strncmp(name, MIPI_ORISE_720P_PANEL_NAME,strnlen(MIPI_ORISE_720P_PANEL_NAME,PANEL_NAME_MAX_LEN)))
-	//	return 0;
-#else
-	if (!strncmp(name, MIPI_TOSHIBA_ATTRI_PANEL_NAME,
-			strnlen(MIPI_TOSHIBA_ATTRI_PANEL_NAME,
-				PANEL_NAME_MAX_LEN)))
-		return 0;
-#endif
-#endif
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 end*/
 
 	if (!strncmp(name, HDMI_PANEL_NAME,
 			strnlen(HDMI_PANEL_NAME,
@@ -317,7 +246,10 @@ static struct msm_bus_scale_pdata mdp_bus_scale_pdata = {
 
 static struct msm_panel_common_pdata mdp_pdata = {
 	.gpio = MDP_VSYNC_GPIO,
-	.mdp_max_clk = 200000000,
+	.mdp_max_clk = 266667000,
+	.mdp_max_bw = 2000000000,
+	.mdp_bw_ab_factor = 115,
+	.mdp_bw_ib_factor = 150,
 	.mdp_bus_scale_table = &mdp_bus_scale_pdata,
 	.mdp_rev = MDP_REV_44,
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
@@ -325,7 +257,6 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #else
 	.mem_hid = MEMTYPE_EBI1,
 #endif
-	.cont_splash_enabled=1,//zhangqi add for cont_splash
 	.mdp_iommu_split_domain = 1,
 };
 
@@ -338,6 +269,9 @@ void __init apq8064_mdp_writeback(struct memtype_reserve* reserve_table)
 		mdp_pdata.ov0_wb_size;
 	reserve_table[mdp_pdata.mem_hid].size +=
 		mdp_pdata.ov1_wb_size;
+
+	pr_info("mem_map: mdp reserved with size 0x%lx in pool\n",
+			mdp_pdata.ov0_wb_size + mdp_pdata.ov1_wb_size);
 #endif
 }
 
@@ -414,352 +348,9 @@ static struct platform_device wfd_device = {
 #define HDMI_DDC_DATA_GPIO	71
 #define HDMI_HPD_GPIO		72
 
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120611 start*/
-/**
- * ATTRI panel on/off
- *
- * @param on
- *
- * @return int
- */
-#if defined (CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
- //zhangqi add for sharp lcd begin 
-#define TPS61135_EN 51
-#endif
-#define LMS_RESET PM8921_GPIO_PM_TO_SYS(25)
-#define LMS_BL_CTRL PM8921_GPIO_PM_TO_SYS(26)
-#define CABC_EN  1
-//#define b2r_1v2_en PM8921_GPIO_PM_TO_SYS(6)
-//#define b2r_1v8_en PM8921_GPIO_PM_TO_SYS(7)
 static bool dsi_power_on;
-
-#if defined (CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
-static int mipi_dsi_lms_panel_power(int on)
-{
-//	static struct regulator *reg_l8, *reg_s4, *reg_l23, *reg_l2, *reg_l17, *reg_l9;
-	static struct regulator *reg_l23, *reg_l2,*reg_l11;
-	static int first_time_panel_on=1;
-	int rc;
-//	static int lms_reset;
-	pr_info("%s: on=%d\n", __func__, on);
-	if (!dsi_power_on) {
-#if 0
-	lms_reset = PM8921_GPIO_PM_TO_SYS(18); /* Displays  (rst_n)*/
-#endif		
-		rc = gpio_request(LMS_RESET, "disp_rst_n");
-		if (rc) {
-			pr_err("request lms_reset failed, rc=%d\n", rc);
-		}
-		gpio_direction_output(LMS_RESET, 1);//zhangqi add for logo
-		
- //zhangqi add for sharp lcd begin 
-		rc = gpio_request(TPS61135_EN, "TPS61135_EN");
-		if (rc) {
-			pr_err("request TPS61135_EN failed, rc=%d\n", rc);
-		}
-		gpio_direction_output(TPS61135_EN, 0);
- //zhangqi add for sharp lcd end
-
-           //not need l2
-             reg_l2 = regulator_get(&msm_mipi_dsi1_device.dev,
-				"dsi1_pll_vdda");
-		if (IS_ERR_OR_NULL(reg_l2)) {
-			pr_err("could not get 8921_l2, rc = %ld\n",
-				PTR_ERR(reg_l2));
-			return -ENODEV;
-		}
-		reg_l11 = regulator_get(&msm_mipi_dsi1_device.dev,
-						"dsi1_avdd");
-		if (IS_ERR(reg_l11)) {
-				pr_err("could not get 8921_l11, rc = %ld\n",
-						PTR_ERR(reg_l11));
-				return -ENODEV;
-		}
-		
-		rc = regulator_set_voltage(reg_l2, 1200000, 1200000);
-		if (rc) {
-			pr_err("set_voltage l2 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-		rc = regulator_set_voltage(reg_l11, 3000000, 3000000);
-		if (rc) {
-				pr_err("set_voltage l11 failed, rc=%d\n", rc);
-				return -EINVAL;
-		}
-
-/*lcd panel power++*/
-		reg_l23 = regulator_get(NULL,
-				"lms_panel_1p8");
-		if (IS_ERR(reg_l23)) {
-			pr_err("could not get 8921_l23, rc = %ld\n",
-				PTR_ERR(reg_l23));
-			return -ENODEV;
-		}		
-		rc = regulator_set_voltage(reg_l23, 1800000, 1800000);
-		if (rc) {
-				pr_err("set_voltage l11 failed, rc=%d\n", rc);
-				return -EINVAL;
-		}
-/*lcd panel power--*/
-
-		dsi_power_on = true;
-	}
-
-	if (on) {
-		
-
-		rc = regulator_set_optimum_mode(reg_l2, 100000);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l2 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-		rc = regulator_enable(reg_l2);
-		if (rc) {
-			pr_err("enable l2 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-		
-	       rc = regulator_set_optimum_mode(reg_l23, 100000);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l23 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-		rc = regulator_enable(reg_l23);
-		if (rc) {
-			pr_err("enable l23 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-		
-	       msleep(200);
-		gpio_set_value_cansleep(TPS61135_EN, 1); /* disp disable (resx=0) */
-
-		if (first_time_panel_on==0)
-		{
-			msleep(100);
-			gpio_set_value_cansleep(LMS_RESET, 0); /* disp disable (resx=0) */
-	 		msleep(20);
-			
-			gpio_set_value_cansleep(LMS_RESET, 1); /* disp enable */
-			msleep(20);
-		}
-		first_time_panel_on=0;
-
-	}		
-	
-	else {
-		
-		rc = regulator_disable(reg_l2);
-		if (rc) {
-			pr_err("disable reg_l2 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-		
-/*[ECID:000000] ZTEBSP wangbing, for orise lcd powerdown timging, 20120827*/
-		gpio_set_value_cansleep(LMS_RESET, 0);
-
-		rc = regulator_disable(reg_l23);
-		if (rc) {
-			pr_err("disable reg_l23 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-
-		gpio_set_value_cansleep(TPS61135_EN, 0); /* disp disable (resx=0) */
-		//gpio_set_value_cansleep(LMS_BL_CTRL, 0); /* BACKLIGHT CTRL */
- 		msleep(100);
-
-		rc = regulator_set_optimum_mode(reg_l23, 100);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l23 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-		rc = regulator_set_optimum_mode(reg_l2, 100);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l2 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-/*[ECID:000000] ZTEBSP wangbing, for orise lcd powerdown timging, 20120827*/
-//		gpio_set_value_cansleep(LMS_RESET, 0);
-
-	}
-	return 0;
-}
-#endif
-#if defined  CONFIG_PROJECT_P864A10 || defined(CONFIG_PROJECT_P864H01)
-static int mipi_dsi_lms_panel_power(int on)
-{
-//	static struct regulator *reg_l8, *reg_s4, *reg_l23, *reg_l2, *reg_l17, *reg_l9;
-	static struct regulator *reg_l23, *reg_l2,*reg_l11;
-	static int first_time_panel_on=1;
-	int rc;
-//	static int lms_reset;
-	pr_info("%s: on=%d\n", __func__, on);
-	if (!dsi_power_on) {
-#if 0
-	lms_reset = PM8921_GPIO_PM_TO_SYS(18); /* Displays  (rst_n)*/
-#endif		
-		rc = gpio_request(LMS_RESET, "disp_rst_n");
-		if (rc) {
-			pr_err("request lms_reset failed, rc=%d\n", rc);
-		}
-		gpio_direction_output(LMS_RESET, 1);//zhangqi add for logo
-
-		rc = gpio_request(CABC_EN, "cabc_en");
-		if (rc) {
-			pr_err("request cabc_en failed, rc=%d\n", rc);
-		}
-		gpio_direction_output(CABC_EN, 0);
-		
-           //not need l2
-             reg_l2 = regulator_get(&msm_mipi_dsi1_device.dev,
-				"dsi1_pll_vdda");
-		if (IS_ERR_OR_NULL(reg_l2)) {
-			pr_err("could not get 8921_l2, rc = %ld\n",
-				PTR_ERR(reg_l2));
-			return -ENODEV;
-		}
-		reg_l11 = regulator_get(&msm_mipi_dsi1_device.dev,
-						"dsi1_avdd");
-		if (IS_ERR(reg_l11)) {
-				pr_err("could not get 8921_l11, rc = %ld\n",
-						PTR_ERR(reg_l11));
-				return -ENODEV;
-		}
-		
-		rc = regulator_set_voltage(reg_l2, 1200000, 1200000);
-		if (rc) {
-			pr_err("set_voltage l2 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-		rc = regulator_set_voltage(reg_l11, 3000000, 3000000);
-		if (rc) {
-				pr_err("set_voltage l11 failed, rc=%d\n", rc);
-				return -EINVAL;
-		}
-
-		reg_l23 = regulator_get(NULL,
-				"lms_panel_1p8");
-		if (IS_ERR(reg_l23)) {
-			pr_err("could not get 8921_l23, rc = %ld\n",
-				PTR_ERR(reg_l23));
-			return -ENODEV;
-		}		
-		rc = regulator_set_voltage(reg_l23, 1800000, 1800000);
-		if (rc) {
-				pr_err("set_voltage l11 failed, rc=%d\n", rc);
-				return -EINVAL;
-		}
-
-
-		dsi_power_on = true;
-	}
-
-	if (on) {
-		
-		rc = regulator_set_optimum_mode(reg_l2, 100000);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l2 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-		rc = regulator_enable(reg_l2);
-		if (rc) {
-			pr_err("enable l2 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-	       rc = regulator_set_optimum_mode(reg_l23, 100000);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l23 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-		rc = regulator_enable(reg_l23);
-		if (rc) {
-			pr_err("enable l23 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-	 	msleep(5);
-		
-		rc = regulator_set_optimum_mode(reg_l11, 110000);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l11 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-		rc = regulator_enable(reg_l11);
-		if (rc) {
-			pr_err("enable l11 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-
-	 	msleep(5);
-		
-		if (first_time_panel_on==0)
-		{
-			gpio_set_value_cansleep(LMS_RESET, 1); /* disp disable (resx=0) */
-	 		msleep(50);
-			
-			gpio_set_value_cansleep(LMS_RESET, 0); /* disp disable (resx=0) */
-	 		msleep(10);
-			
-			gpio_set_value_cansleep(LMS_RESET, 1); /* disp enable */
-			msleep(10);
-		}
-		first_time_panel_on=0;
-	}		
-	
-	else {
-	
-		rc = regulator_disable(reg_l2);
-		if (rc) {
-			pr_err("disable reg_l2 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-		rc = regulator_set_optimum_mode(reg_l2, 100);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l2 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-	
-		
-
-/*[ECID:000000] ZTEBSP wangbing, for orise lcd powerdown timging, 20120827*/
-		gpio_set_value_cansleep(LMS_RESET, 0);
-	
-	 	msleep(5);
-		
-		rc = regulator_disable(reg_l11);
-		if (rc) {
-			pr_err("disable reg_l11 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-		rc = regulator_set_optimum_mode(reg_l11, 100);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l11 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-		
-	 	msleep(5);
-		rc = regulator_disable(reg_l23);
-		if (rc) {
-			pr_err("disable reg_l23 failed, rc=%d\n", rc);
-			return -ENODEV;
-		}
-		rc = regulator_set_optimum_mode(reg_l23, 100);
-		if (rc < 0) {
-			pr_err("set_optimum_mode l23 failed, rc=%d\n", rc);
-			return -EINVAL;
-		}
-
-	}
-	return 0;
-}
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 end*/
-#endif
 static int mipi_dsi_panel_power(int on)
 {
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 start*/
-#if 1
-mipi_dsi_lms_panel_power(on);
-
-#else
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 start*/
 	static struct regulator *reg_lvs7, *reg_l2, *reg_l11, *reg_ext_3p3v;
 	static int gpio36, gpio25, gpio26, mpp3;
 	int rc;
@@ -883,7 +474,11 @@ mipi_dsi_lms_panel_power(on);
 
 		gpio_set_value_cansleep(gpio36, 0);
 		gpio_set_value_cansleep(gpio25, 1);
+		if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
+			gpio_set_value_cansleep(gpio26, 1);
 	} else {
+		if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
+			gpio_set_value_cansleep(gpio26, 0);
 		gpio_set_value_cansleep(gpio25, 0);
 		gpio_set_value_cansleep(gpio36, 1);
 
@@ -916,18 +511,12 @@ mipi_dsi_lms_panel_power(on);
 			return -ENODEV;
 		}
 	}
-#endif    //shihuiqin--
+
 	return 0;
 }
-//zhangqi add for cons_splash begin 
-static char mipi_dsi_splash_is_enabled(void)
-{
-	return mdp_pdata.cont_splash_enabled;
-}
-//zhangqi add for cons_splash end
+
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.dsi_power_save = mipi_dsi_panel_power,
-	.splash_is_enabled = mipi_dsi_splash_is_enabled,//zhangqi add for cons_splash
 };
 
 static bool lvds_power_on;
@@ -1020,7 +609,11 @@ static int lvds_panel_power(int on)
 
 		gpio_set_value_cansleep(gpio36, 0);
 		gpio_set_value_cansleep(mpp3, 1);
+		if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
+			gpio_set_value_cansleep(gpio26, 1);
 	} else {
+		if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
+			gpio_set_value_cansleep(gpio26, 0);
 		gpio_set_value_cansleep(mpp3, 0);
 		gpio_set_value_cansleep(gpio36, 1);
 
@@ -1046,14 +639,17 @@ static int lvds_panel_power(int on)
 
 static int lvds_pixel_remap(void)
 {
+	u32 ver = socinfo_get_version();
+
 	if (machine_is_apq8064_cdp() ||
 	    machine_is_apq8064_liquid()) {
-		u32 ver = socinfo_get_version();
 		if ((SOCINFO_VERSION_MAJOR(ver) == 1) &&
 		    (SOCINFO_VERSION_MINOR(ver) == 0))
 			return LVDS_PIXEL_MAP_PATTERN_1;
 	} else if (machine_is_mpq8064_dtv()) {
-		return LVDS_PIXEL_MAP_PATTERN_2;
+		if ((SOCINFO_VERSION_MAJOR(ver) == 1) &&
+		    (SOCINFO_VERSION_MINOR(ver) == 0))
+			return LVDS_PIXEL_MAP_PATTERN_2;
 	}
 	return 0;
 }
@@ -1081,214 +677,6 @@ static struct platform_device lvds_chimei_panel_device = {
 #define FRC_GPIO_UPDATE	(SX150X_EXP4_GPIO_BASE + 8)
 #define FRC_GPIO_RESET	(SX150X_EXP4_GPIO_BASE + 9)
 #define FRC_GPIO_PWR	(SX150X_EXP4_GPIO_BASE + 10)
-
-//wangtao fusion3-debug begin
-/*
-static int lvds_frc_gpio[] = {FRC_GPIO_UPDATE, FRC_GPIO_RESET, FRC_GPIO_PWR};
-*/
-//wangtao fusion3-debug end
-
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 start*/
-#define d2r_reset    0//PM8921_GPIO_PM_TO_SYS(43)
-void lcd_d2r_config_gpio(int on)
-{
-	static struct regulator *d2r_1v2, *d2r_1v8,*d2r_1v8_pull_up;
-	int rc;
-	static bool initialised = 0;
-	printk("%s %d\n", __func__, on);
-
-	if (!initialised)
-	{
-		rc = gpio_request(d2r_reset, "d2r_rst_n");
-		if (rc) {
-			pr_err("request d2r_reset failed, rc=%d\n", rc);
-		}
-		gpio_direction_output(d2r_reset, 0);		
-
-	       //LVS2 SMPS
-		d2r_1v2 = regulator_get(NULL,
-				"d2r_1v2");
-		if (IS_ERR(d2r_1v2)) {
-			pr_err("could not get d2r_1v2, rc = %ld\n",
-				PTR_ERR(d2r_1v2));
-//			return -ENODEV;
-		}
-
-		//L14  LDO
-		d2r_1v8 = regulator_get(NULL,
-				"d2r_1v8");
-		if (IS_ERR(d2r_1v8)) {
-			pr_err("could not get d2r_1v8, rc = %ld\n",
-				PTR_ERR(d2r_1v8));
-//			return -ENODEV;
-		}
-
-		//S4  SMPS   s4 should be always on debfined in msm_rpm_regulator_init_data
-		d2r_1v8_pull_up = regulator_get(NULL,
-				"d2r_1v8_pull_up");
-		if (IS_ERR(d2r_1v8_pull_up)) {
-			pr_err("could not get d2r_1v8_pull_up, rc = %ld\n",
-				PTR_ERR(d2r_1v8_pull_up));
-//			return -ENODEV;
-		}
-
-	#if 0	//lvs not support the voltage setting.
-		rc = regulator_set_voltage(d2r_1v2, 1200000, 1200000);
-		if (rc) {
-			pr_err("set_voltage d2r_1v2 failed, rc=%d\n", rc);
-//			return -EINVAL;
-		}
-	#endif
-		rc = regulator_set_voltage(d2r_1v8, 1800000, 1800000);
-		if (rc) {
-			pr_err("set_voltage d2r_1v8 failed, rc=%d\n", rc);
-//			return -EINVAL;
-		}
-
-		rc = regulator_set_voltage(d2r_1v8_pull_up, 1800000, 1800000);
-		if (rc) {
-			pr_err("set_voltage d2r_1v8_pull_up failed, rc=%d\n", rc);
-//			return -EINVAL;
-		}
-		
-		
-		initialised = 1;
-	}
-		
-#if 0	
-	rc = gpio_request(LCD_3V3EN, "LCD_3VEN");
-	if (rc) {
-		pr_err("request gpio LCD_3V3EN failed, rc=%d\n", rc);
-		return ;
-	}
-
-	rc = gpio_request(LCD_12V_BOOST_EN, "12V_BOOST_EN");
-	if (rc) {
-		pr_err("request gpio 12V_BOOST_EN failed, rc=%d\n", rc);
-		return ;
-	}
-
-		rc = gpio_request(LCD_POWER_EN, "12V_BOOST_EN");
-	if (rc) {
-		pr_err("request gpio 12V_BOOST_EN failed, rc=%d\n", rc);
-		return ;
-	}
-#endif
-
-	if(on){
-#if 0
-		gpio_set_value_cansleep(LCD_3V3EN, 1);
-		msleep(50);
-
-		rc = gpio_direction_output(LCD_POWER_EN, 1);
-		if (rc) {
-			pr_err("%s: unable to set_direction for mxt_ldo_en gpio [%d]\n",
-			__func__, LCD_POWER_EN);
-
-		}
-		msleep(50);
-//		gpio_set_value_cansleep(LCD_12V_BOOST_EN, 1);
-#endif		
-		rc = regulator_enable(d2r_1v2);
-		if (rc) {
-			pr_err("enable d2r_1v2 failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-
-		rc = regulator_enable(d2r_1v8);
-		if (rc) {
-			pr_err("enable d2r_1v8 failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-
-		rc = regulator_enable(d2r_1v8_pull_up);
-		if (rc) {
-			pr_err("enable d2r_1v8_pull_up failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-		
-		
-		msleep(5);
-		gpio_set_value_cansleep(d2r_reset, 1);
-		msleep(10);
-	}
-	else
-	{
-#if 0	
-//		gpio_set_value_cansleep(LCD_12V_BOOST_EN, 0);
-		gpio_set_value_cansleep(LCD_3V3EN, 0);
-//		gpio_set_value_cansleep(LCD_POWER_EN,0);
-#endif
-		gpio_set_value_cansleep(d2r_reset, 0);
-		msleep(5);
-
-		rc = regulator_disable(d2r_1v8);
-		if (rc) {
-			pr_err("disable d2r_1v8 failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}		
-
-		rc = regulator_disable(d2r_1v2);
-		if (rc) {
-			pr_err("disable d2r_1v2 failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-
-#if 0
-//s4 should be always on debfined in msm_rpm_regulator_init_data
-		rc = regulator_disable(d2r_1v8_pull_up);
-		if (rc) {
-			pr_err("disable d2r_1v8_pull_up failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-#endif
-		
-
-	}
-#if 0	
-	gpio_free(LCD_3V3EN);
-//	gpio_free(LCD_12V_BOOST_EN);
-//	gpio_free(LCD_POWER_EN);
-#endif
-
-}
-
-/* [ECID¡êo000000000000] ZTEBSP wangtao139815 add for P864A20, begin */
-#if defined(CONFIG_PROJECT_P864A10) || defined(CONFIG_PROJECT_P864H01)||defined(CONFIG_PROJECT_P864A20) \
-|| defined(CONFIG_PROJECT_P864G02)
-/* [ECID¡êo000000000000] ZTEBSP wangtao139815 add for P864A20, end */
-#else
-static int dsi2rgb_gpio[2] = {
-	LPM_CHANNEL,/* Backlight PWM-ID=0 for PMIC-GPIO#24 */
-	0x1F08 /* DSI2LVDS Bridge GPIO Output, mask=0x1f, out=0x08 */
-	};
-static struct msm_panel_common_pdata mipi_dsi2rgb_pdata = {
-	.gpio_num = dsi2rgb_gpio,
-.panel_config_gpio = lcd_d2r_config_gpio,
-};
-static struct platform_device mipi_dsi2rgb_bridge_device = {
-	.name = "mipi_tc358762",
-	.id = 0,
-	.dev.platform_data = &mipi_dsi2rgb_pdata,
-};
-#endif
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 end*/
-
-//wangtao fusion3-debug begin
-/*
-static struct lvds_panel_platform_data lvds_frc_pdata = {
-	.gpio = lvds_frc_gpio,
-};
-
-static struct platform_device lvds_frc_panel_device = {
-	.name = "lvds_frc_fhd",
-	.id = 0,
-	.dev = {
-		.platform_data = &lvds_frc_pdata,
-	}
-};
-*/
-//wangtao fusion3-debug end
 
 static int lvds_frc_gpio[] = {FRC_GPIO_UPDATE, FRC_GPIO_RESET, FRC_GPIO_PWR};
 static struct lvds_panel_platform_data lvds_frc_pdata = {
@@ -1329,228 +717,6 @@ static struct platform_device mipi_dsi_toshiba_panel_device = {
 			.platform_data = &toshiba_pdata,
 	}
 };
-
-/*[ECID:000000] ZTEBSP wangbing, for orise lcd, 20120823*/
-#if defined(CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
-//#define orise_reset    0//PM8921_GPIO_PM_TO_SYS(43)
-void lcd_sharp_config_gpio(int on)
-{
-	printk("%s %d do nothing\n", __func__, on);
-}
-
-static int sharp_gpio[2] = {
-	LPM_CHANNEL,/* Backlight PWM-ID=0 for PMIC-GPIO#24 */
-	0x1F08 /* DSI2LVDS Bridge GPIO Output, mask=0x1f, out=0x08 */
-	};
-
-static struct msm_panel_common_pdata mipi_sharp_pdata = {
-	.gpio_num =sharp_gpio,
-	.panel_config_gpio = lcd_sharp_config_gpio,
-};
-
-static struct platform_device mipi_sharp_device = {
-	.name = "mipi_sharp",
-	.id = 0,
-	.dev.platform_data = &mipi_sharp_pdata,
-};
-#endif
-#if defined(CONFIG_PROJECT_P864A10) || defined(CONFIG_PROJECT_P864H01)
-#if 0
-#define orise_reset    0//PM8921_GPIO_PM_TO_SYS(43)
-#endif
-void lcd_orise_config_gpio(int on)
-{
-	static struct regulator *d2r_1v2, *d2r_1v8,*d2r_1v8_pull_up;
-	int rc;
-	static bool initialised = 0;
-	printk("%s %d\n", __func__, on);
-
-	if (!initialised)
-	{
-#if 0
-		rc = gpio_request(orise_reset, "orise_rst_n");
-		if (rc) {
-			pr_err("request orise_reset failed, rc=%d\n", rc);
-		}
-		gpio_direction_output(orise_reset, 0);		
-#endif
-	       //LVS2 SMPS
-		d2r_1v2 = regulator_get(NULL,
-				"d2r_1v2");
-		if (IS_ERR(d2r_1v2)) {
-			pr_err("could not get d2r_1v2, rc = %ld\n",
-				PTR_ERR(d2r_1v2));
-//			return -ENODEV;
-		}
-
-		//L14  LDO
-		d2r_1v8 = regulator_get(NULL,
-				"d2r_1v8");
-		if (IS_ERR(d2r_1v8)) {
-			pr_err("could not get d2r_1v8, rc = %ld\n",
-				PTR_ERR(d2r_1v8));
-//			return -ENODEV;
-		}
-
-		//S4  SMPS   s4 should be always on debfined in msm_rpm_regulator_init_data
-		d2r_1v8_pull_up = regulator_get(NULL,
-				"d2r_1v8_pull_up");
-		if (IS_ERR(d2r_1v8_pull_up)) {
-			pr_err("could not get d2r_1v8_pull_up, rc = %ld\n",
-				PTR_ERR(d2r_1v8_pull_up));
-//			return -ENODEV;
-		}
-
-	#if 0	//lvs not support the voltage setting.
-		rc = regulator_set_voltage(d2r_1v2, 1200000, 1200000);
-		if (rc) {
-			pr_err("set_voltage d2r_1v2 failed, rc=%d\n", rc);
-//			return -EINVAL;
-		}
-	#endif
-		rc = regulator_set_voltage(d2r_1v8, 1800000, 1800000);
-		if (rc) {
-			pr_err("set_voltage d2r_1v8 failed, rc=%d\n", rc);
-//			return -EINVAL;
-		}
-
-		rc = regulator_set_voltage(d2r_1v8_pull_up, 1800000, 1800000);
-		if (rc) {
-			pr_err("set_voltage d2r_1v8_pull_up failed, rc=%d\n", rc);
-//			return -EINVAL;
-		}
-		
-		
-		initialised = 1;
-	}
-		
-#if 0	
-	rc = gpio_request(LCD_3V3EN, "LCD_3VEN");
-	if (rc) {
-		pr_err("request gpio LCD_3V3EN failed, rc=%d\n", rc);
-		return ;
-	}
-
-	rc = gpio_request(LCD_12V_BOOST_EN, "12V_BOOST_EN");
-	if (rc) {
-		pr_err("request gpio 12V_BOOST_EN failed, rc=%d\n", rc);
-		return ;
-	}
-
-		rc = gpio_request(LCD_POWER_EN, "12V_BOOST_EN");
-	if (rc) {
-		pr_err("request gpio 12V_BOOST_EN failed, rc=%d\n", rc);
-		return ;
-	}
-#endif
-
-	if(on){
-#if 0
-		gpio_set_value_cansleep(LCD_3V3EN, 1);
-		msleep(50);
-
-		rc = gpio_direction_output(LCD_POWER_EN, 1);
-		if (rc) {
-			pr_err("%s: unable to set_direction for mxt_ldo_en gpio [%d]\n",
-			__func__, LCD_POWER_EN);
-
-		}
-		msleep(50);
-//		gpio_set_value_cansleep(LCD_12V_BOOST_EN, 1);
-#endif		
-		rc = regulator_enable(d2r_1v2);
-		if (rc) {
-			pr_err("enable d2r_1v2 failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-
-		rc = regulator_enable(d2r_1v8);
-		if (rc) {
-			pr_err("enable d2r_1v8 failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-
-		rc = regulator_enable(d2r_1v8_pull_up);
-		if (rc) {
-			pr_err("enable d2r_1v8_pull_up failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-		
-		
-		msleep(5);
-#if 0
-		gpio_set_value_cansleep(orise_reset, 1);
-		msleep(10);
-#endif		
-	}
-	else
-	{
-#if 0	
-//		gpio_set_value_cansleep(LCD_12V_BOOST_EN, 0);
-		gpio_set_value_cansleep(LCD_3V3EN, 0);
-//		gpio_set_value_cansleep(LCD_POWER_EN,0);
-		gpio_set_value_cansleep(orise_reset, 0);
-		msleep(5);
-#endif
-		rc = regulator_disable(d2r_1v8);
-		if (rc) {
-			pr_err("disable d2r_1v8 failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}		
-
-		rc = regulator_disable(d2r_1v2);
-		if (rc) {
-			pr_err("disable d2r_1v2 failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-
-#if 0
-//s4 should be always on debfined in msm_rpm_regulator_init_data
-		rc = regulator_disable(d2r_1v8_pull_up);
-		if (rc) {
-			pr_err("disable d2r_1v8_pull_up failed, rc=%d\n", rc);
-//			return -ENODEV;
-		}
-#endif
-		
-
-	}
-#if 0	
-	gpio_free(LCD_3V3EN);
-//	gpio_free(LCD_12V_BOOST_EN);
-//	gpio_free(LCD_POWER_EN);
-#endif
-
-}
-
-static int orise_gpio[2] = {
-	LPM_CHANNEL,/* Backlight PWM-ID=0 for PMIC-GPIO#24 */
-	0x1F08 /* DSI2LVDS Bridge GPIO Output, mask=0x1f, out=0x08 */
-	};
-
-static struct msm_panel_common_pdata mipi_orise_pdata = {
-	.gpio_num = orise_gpio,
-	.panel_config_gpio = lcd_orise_config_gpio,
-};
-
-static struct platform_device mipi_orise_lead_device = {
-	.name = "mipi_orise_lead",
-	.id = 0,
-	.dev.platform_data = &mipi_orise_pdata,
-};
-
-static struct platform_device mipi_orise_boe_device = {
-	.name = "mipi_orise_boe",
-	.id = 0,
-	.dev.platform_data = &mipi_orise_pdata,
-};
-
-static struct platform_device mipi_orise_cpt_device = {
-	.name = "mipi_orise_cpt",
-	.id = 0,
-	.dev.platform_data = &mipi_orise_pdata,
-};
-#endif
 
 static struct msm_bus_vectors dtv_bus_init_vectors[] = {
 	{
@@ -1853,43 +1019,12 @@ void __init apq8064_init_fb(void)
 	platform_device_register(&wfd_device);
 #endif
 
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 start*/
-if (0) 
-{
 	if (machine_is_apq8064_liquid())
 		platform_device_register(&mipi_dsi2lvds_bridge_device);
 	if (machine_is_apq8064_mtp())
 		platform_device_register(&mipi_dsi_toshiba_panel_device);
 	if (machine_is_mpq8064_dtv())
 		platform_device_register(&lvds_frc_panel_device);
-}
-else 
-{
-/*[ECID:000000] ZTEBSP wangbing, for orise lcd, 20120823*/
-#if defined(CONFIG_PROJECT_P864A10) || defined(CONFIG_PROJECT_P864H01)
-	switch (lcd_enum)
-	{
-		case OTM1283_BOE_HD_LCM : 
-			platform_device_register(&mipi_orise_boe_device);
-			break;
-		case OTM1283_LEAD_HD_LCM : 
-			platform_device_register(&mipi_orise_lead_device);
-			break ;
-		case OTM1283_CPT_HD_LCM : 
-			platform_device_register(&mipi_orise_cpt_device);
-			break ;		
-		 default :
-		 	platform_device_register(&mipi_orise_lead_device);
-		 	printk("%s no match panel detected \n",__func__);
-			break ;
-	}
-#elif defined(CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
-		platform_device_register(&mipi_sharp_device);
-#else
-		platform_device_register(&mipi_dsi2rgb_bridge_device);
-#endif
-}
-/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 end*/
 
 	msm_fb_register_device("mdp", &mdp_pdata);
 	msm_fb_register_device("lvds", &lvds_pdata);
@@ -1954,9 +1089,15 @@ void __init apq8064_set_display_params(char *prim_panel, char *ext_panel,
 			PANEL_NAME_MAX_LEN);
 		pr_debug("msm_fb_pdata.ext_panel_name %s\n",
 			msm_fb_pdata.ext_panel_name);
+
+		if (!strncmp((char *)msm_fb_pdata.ext_panel_name,
+			MHL_PANEL_NAME, strnlen(MHL_PANEL_NAME,
+				PANEL_NAME_MAX_LEN))) {
+			pr_debug("MHL is external display by boot parameter\n");
+			mhl_display_enabled = 1;
+		}
 	}
-	#if defined(CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02) 
-	set_mdp_clocks_for_wuxga();//zhangqi add for blue screen test 2012.10.24
-	#endif
+
 	msm_fb_pdata.ext_resolution = resolution;
+	hdmi_msm_data.is_mhl_enabled = mhl_display_enabled;
 }

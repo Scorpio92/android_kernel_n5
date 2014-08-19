@@ -14,6 +14,35 @@ config POWER_SUPPLY_DEBUG
 	  Say Y here to enable debugging messages for power supply class
 	  and drivers.
 
+config ZTEMT_HARDWARE_ID
+	bool "ZTEMT Hardware ID"
+	default y
+	help
+	 ZTEMT Hardware ID
+	 
+config ZTEMT_CHARGE
+	bool "ZTEMT Charge Feature"
+	default y
+	help
+	  ZTEMT Charge Feature
+	  
+config ZTEMT_POWEROFF_CHARGE
+	bool "ZTEMT PowOff Charge Feature"
+	default y
+	help
+	  ZTEMT PowOff Charge Feature
+	  
+config ZTEMT_POWER_DEBUG
+	bool "ZTEMT Power Debug Feature"
+	default y
+	help
+	  ZTEMT Power Debug Feature
+	  
+config ZTEMT_ABNORMAL_BOOT
+	bool "ZTEMT abnormal Boot status Feature"
+	default y
+	help
+	  ZTEMT abnormal boot status Feature
 config PDA_POWER
 	tristate "Generic PDA/phone power driver"
 	depends on !S390
@@ -415,6 +444,14 @@ config PM8921_BMS
 	help
 	  Say Y here to enable support for pm8921 chip bms subdevice
 
+config BATTERY_BCL
+	tristate "Battery Current Limit driver"
+	help
+	  Say Y here to enable support for battery current limit
+	  device. The BCL driver will poll BMS if
+	  thermal daemon enables BCL.
+	  It will notify thermal daemon if IBat crosses Imax threshold.
+
 config CHARGER_SMB347
 	tristate "Summit Microelectronics SMB347 Battery Charger"
 	depends on I2C
@@ -434,4 +471,5 @@ config AB8500_BATTERY_THERM_ON_BATCTRL
 	help
 	  Say Y to enable battery temperature measurements using
 	  thermistor connected on BATCTRL ADC.
+
 endif # POWER_SUPPLY

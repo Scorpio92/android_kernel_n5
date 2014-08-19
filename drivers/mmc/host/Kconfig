@@ -465,6 +465,13 @@ config MMC_MSM
 	  This provides support for the SD/MMC cell found in the
           MSM and QSD SOCs from Qualcomm.
 
+config ZTEMT_SDCARD_DET_GPIO_ACTIVE_LOW
+	boolean "ZTEMT SD Card Detect GPIO Active Low"
+	depends on MMC_MSM
+	default y
+	help
+	  Say Y here if the SD card detect GPIO is ACTIVE_LOW
+
 config MMC_MSM_SDC1_SUPPORT
 	boolean "Qualcomm SDC1 support"
 	depends on MMC_MSM
@@ -499,6 +506,10 @@ config MMC_MSM_SDC3_SUPPORT
 	default n
 	help
 	  Select Y to enable Slot 3.
+
+config MMC_MSM_SDC3_POLLING
+	boolean "Qualcomm SDC3 support"
+	depends on MMC_MSM
 
 config MMC_MSM_SDC3_8_BIT_SUPPORT
 	boolean "Qualcomm SDC3 8bit support"

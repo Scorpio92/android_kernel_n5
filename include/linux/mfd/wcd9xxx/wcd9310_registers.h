@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -191,7 +191,15 @@
 #define TABLA_A_MICB_CFILT_1_PRECHRG			(0x012A)
 #define TABLA_A_MICB_CFILT_1_PRECHRG__POR			(0x00000038)
 #define TABLA_A_MICB_1_CTL			(0x012B)
+
+#ifdef CONFIG_ZTEMT_AUDIO_DMIC
+/*ztemt audio add by sunli 20131010,set bit4 1 for micbias is no legacy having bypass capacitor*/
 #define TABLA_A_MICB_1_CTL__POR			(0x00000016)
+#else
+/*ztemt audio add by zmwu 20121010, set bit4 0 for micbias is legacy having bypass capacitor*/
+#define TABLA_A_MICB_1_CTL__POR			(0x00000006)
+#endif
+
 #define TABLA_A_MICB_1_INT_RBIAS			(0x012C)
 #define TABLA_A_MICB_1_INT_RBIAS__POR			(0x00000000)
 #define TABLA_A_MICB_1_MBHC			(0x012D)
@@ -260,7 +268,14 @@
 #define TABLA_A_TX_1_2_SAR_ERR_CH2			(0x015C)
 #define TABLA_A_TX_1_2_SAR_ERR_CH2__POR			(0x00000000)
 #define TABLA_A_TX_3_4_EN			(0x015D)
+
+#ifdef CONFIG_ZTEMT_AUDIO_HANDSET_MIC
+/*ztemt audio add by zmwu 20121010, set bit4 1 for MIC3 is legacy,set bit1 for MIC4 is legacy*/
+#define TABLA_A_TX_3_4_EN__POR			(0x00000011)
+#else
 #define TABLA_A_TX_3_4_EN__POR			(0x00000000)
+#endif
+
 #define TABLA_A_TX_3_4_TEST_EN			(0x015E)
 #define TABLA_A_TX_3_4_TEST_EN__POR			(0x000000CC)
 #define TABLA_A_TX_3_4_ADC_CH3			(0x015F)
@@ -898,37 +913,37 @@
 #define TABLA_A_CDC_DEBUG_B6_CTL			(0x0000036D)
 #define TABLA_A_CDC_DEBUG_B6_CTL__POR			(0x00000000)
 #define TABLA_A_CDC_COMP1_B1_CTL			(0x00000370)
-#define TABLA_A_CDC_COMP1_B1_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP1_B1_CTL__POR			(0x00000030)
 #define TABLA_A_CDC_COMP1_B2_CTL			(0x00000371)
-#define TABLA_A_CDC_COMP1_B2_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP1_B2_CTL__POR			(0x000000B5)
 #define TABLA_A_CDC_COMP1_B3_CTL			(0x00000372)
-#define TABLA_A_CDC_COMP1_B3_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP1_B3_CTL__POR			(0x00000028)
 #define TABLA_A_CDC_COMP1_B4_CTL			(0x00000373)
-#define TABLA_A_CDC_COMP1_B4_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP1_B4_CTL__POR			(0x0000003C)
 #define TABLA_A_CDC_COMP1_B5_CTL			(0x00000374)
-#define TABLA_A_CDC_COMP1_B5_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP1_B5_CTL__POR			(0x0000001F)
 #define TABLA_A_CDC_COMP1_B6_CTL			(0x00000375)
 #define TABLA_A_CDC_COMP1_B6_CTL__POR			(0x00000000)
 #define TABLA_A_CDC_COMP1_SHUT_DOWN_STATUS		(0x00000376)
 #define TABLA_A_CDC_COMP1_SHUT_DOWN_STATUS__POR	(0x00000000)
 #define TABLA_A_CDC_COMP1_FS_CFG			(0x00000377)
-#define TABLA_A_CDC_COMP1_FS_CFG__POR			(0x00000000)
+#define TABLA_A_CDC_COMP1_FS_CFG__POR			(0x0000001B)
 #define TABLA_A_CDC_COMP2_B1_CTL			(0x00000378)
-#define TABLA_A_CDC_COMP2_B1_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP2_B1_CTL__POR			(0x00000030)
 #define TABLA_A_CDC_COMP2_B2_CTL			(0x00000379)
-#define TABLA_A_CDC_COMP2_B2_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP2_B2_CTL__POR			(0x000000B5)
 #define TABLA_A_CDC_COMP2_B3_CTL			(0x0000037A)
-#define TABLA_A_CDC_COMP2_B3_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP2_B3_CTL__POR			(0x00000028)
 #define TABLA_A_CDC_COMP2_B4_CTL			(0x0000037B)
-#define TABLA_A_CDC_COMP2_B4_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP2_B4_CTL__POR			(0x0000003C)
 #define TABLA_A_CDC_COMP2_B5_CTL			(0x0000037C)
-#define TABLA_A_CDC_COMP2_B5_CTL__POR			(0x00000000)
+#define TABLA_A_CDC_COMP2_B5_CTL__POR			(0x0000001F)
 #define TABLA_A_CDC_COMP2_B6_CTL			(0x0000037D)
 #define TABLA_A_CDC_COMP2_B6_CTL__POR			(0x00000000)
 #define TABLA_A_CDC_COMP2_SHUT_DOWN_STATUS		(0x0000037E)
 #define TABLA_A_CDC_COMP2_SHUT_DOWN_STATUS__POR	(0x00000000)
 #define TABLA_A_CDC_COMP2_FS_CFG			(0x0000037F)
-#define TABLA_A_CDC_COMP2_FS_CFG__POR			(0x00000000)
+#define TABLA_A_CDC_COMP2_FS_CFG__POR			(0x0000001B)
 #define TABLA_A_CDC_CONN_RX1_B1_CTL			(0x00000380)
 #define TABLA_A_CDC_CONN_RX1_B1_CTL__POR			(0x00000000)
 #define TABLA_A_CDC_CONN_RX1_B2_CTL			(0x00000381)

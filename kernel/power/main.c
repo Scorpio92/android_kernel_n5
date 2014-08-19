@@ -295,6 +295,69 @@ static int suspend_stats_show(struct seq_file *s, void *unused)
 
 	return 0;
 }
+#ifdef CONFIG_ZTEMT_POWER_DEBUG
+int suspend_stats_debug(void)
+{
+	int i, index, last_dev, last_errno, last_step;
+    static int success_counter=0;
+
+	last_dev = suspend_stats.last_failed_dev + REC_FAILED_NUM - 1;
+	last_dev %= REC_FAILED_NUM;
+	last_errno = suspend_stats.last_failed_errno + REC_FAILED_NUM - 1;
+	last_errno %= REC_FAILED_NUM;
+	last_step = suspend_stats.last_failed_step + REC_FAILED_NUM - 1;
+	last_step %= REC_FAILED_NUM;
+    //printk("I am in.\n");
+    if(suspend_stats.success!=success_counter+1)
+     {
+        
+        printk("%s: %d\n%s: %d\n%s: %d\n%s: %d\n%s: %d\n"
+    			"%s: %d\n%s: %d\n%s: %d\n%s: %d\n%s: %d\n",
+    			"success", suspend_stats.success,
+    			"fail", suspend_stats.fail,
+    			"failed_freeze", suspend_stats.failed_freeze,
+    			"failed_prepare", suspend_stats.failed_prepare,
+    			"failed_suspend", suspend_stats.failed_suspend,
+    			"failed_suspend_late",
+    				suspend_stats.failed_suspend_late,
+    			"failed_suspend_noirq",
+    				suspend_stats.failed_suspend_noirq,
+    			"failed_resume", suspend_stats.failed_resume,
+    			"failed_resume_early",
+    				suspend_stats.failed_resume_early,
+    			"failed_resume_noirq",
+    				suspend_stats.failed_resume_noirq);
+    	printk("failures:\n  last_failed_dev:\t%-s\n",
+    			suspend_stats.failed_devs[last_dev]);
+    	for (i = 1; i < REC_FAILED_NUM; i++) {
+    		index = last_dev + REC_FAILED_NUM - i;
+    		index %= REC_FAILED_NUM;
+    		printk("\t\t\t%-s\n",
+    			suspend_stats.failed_devs[index]);
+    	}
+    	printk("  last_failed_errno:\t%-d\n",
+    			suspend_stats.errno[last_errno]);
+    	for (i = 1; i < REC_FAILED_NUM; i++) {
+    		index = last_errno + REC_FAILED_NUM - i;
+    		index %= REC_FAILED_NUM;
+    		printk("\t\t\t%-d\n",
+    			suspend_stats.errno[index]);
+    	}
+    	printk("  last_failed_step:\t%-s\n",
+    			suspend_step_name(
+    				suspend_stats.failed_steps[last_step]));
+    	for (i = 1; i < REC_FAILED_NUM; i++) {
+    		index = last_step + REC_FAILED_NUM - i;
+    		index %= REC_FAILED_NUM;
+    		printk("\t\t\t%-s\n",
+    			suspend_step_name(
+    				suspend_stats.failed_steps[index]));
+    	}
+     }
+    success_counter=suspend_stats.success;  //regardless normal or abnormal,update the counter
+	return 0;
+} 
+#endif
 
 static int suspend_stats_open(struct inode *inode, struct file *file)
 {

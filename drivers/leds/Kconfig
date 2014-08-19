@@ -24,6 +24,26 @@ config LEDS_CLASS
 
 comment "LED drivers"
 
+config ZTEMT_KPD_LEDS_PMIC
+	bool "ZTEMT KPD LED BACKLIGHT"
+	default y
+	help
+	 ZTEMT KEYPAD LED BACKLIGHT
+
+config ZTEMT_LED_PMIC_MPP
+	bool "MPP FOR KPD LED (Z5_MINI)"
+	depends on ZTEMT_KPD_LEDS_PMIC
+	default n
+	help
+	 ZTEMT KEYPAD LED BACKLIGHT	FOR Z5_MINI
+
+config ZTEMT_LED_PMIC_IC
+	bool "IC FOR KPD LED (Z5)"
+	depends on ZTEMT_KPD_LEDS_PMIC
+	default n
+	help
+	 ZTEMT KEYPAD LED BACKLIGHT	FOR Z5_MINI
+	 
 config LEDS_88PM860X
 	tristate "LED Support for Marvell 88PM860x PMIC"
 	depends on LEDS_CLASS
@@ -299,11 +319,6 @@ config LEDS_PM8XXX
 	  To compile this driver as a module, choose M here: the module will
 	  be called leds-pmic8xxx.
 
-#/*[ECID:000000] ZTEBSP wangbing, for pm8921 led, 20120903 */
-config LEDS_PM8XXX_HW_BLINK
-	bool "LED hardware blink support for Qualcomm PMIC8XXX"
-	depends on LEDS_PM8XXX
-
 config LEDS_PCA9633
 	tristate "LED support for PCA9633 I2C chip"
 	depends on LEDS_CLASS
@@ -311,6 +326,16 @@ config LEDS_PCA9633
 	help
 	  This option enables support for LEDs connected to the PCA9633
 	  LED driver chip accessed via the I2C bus.
+
+config LEDS_QPNP
+	tristate "Support for QPNP LEDs"
+	depends on SPMI && OF_SPMI
+	help
+	  This driver supports the leds functionality of Qualcomm PNP PMIC.  It
+	  includes RGB Leds, WLED and Flash Led.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called leds-qpnp.
 
 config LEDS_WM831X_STATUS
 	tristate "LED support for status LEDs on WM831x PMICs"

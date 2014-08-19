@@ -30,7 +30,6 @@ static enum {
 	FB_STATE_DRAWING_OK,
 } fb_state;
 
-
 /* tell userspace to stop drawing, wait for it to stop */
 static void stop_drawing_early_suspend(struct early_suspend *h)
 {
@@ -154,9 +153,6 @@ static struct attribute_group attr_group = {
 	.attrs = g,
 };
 
-/*ZTEBSP wangbing, for chager display, 20121226 */
-extern char *get_bootmode(void);
-	
 static int __init android_power_init(void)
 {
 	int ret;
@@ -170,17 +166,13 @@ static int __init android_power_init(void)
 		return ret;
 	}
 
-/*ZTEBSP wangbing, for chager display, 20121226 */
-	if (strcmp(get_bootmode(), "charger"))
-		register_early_suspend(&stop_drawing_early_suspend_desc);
+	register_early_suspend(&stop_drawing_early_suspend_desc);
 	return 0;
 }
 
 static void  __exit android_power_exit(void)
 {
-/*ZTEBSP wangbing, for chager display, 20121226 */
-	if (strcmp(get_bootmode(), "charger"))
-		unregister_early_suspend(&stop_drawing_early_suspend_desc);
+	unregister_early_suspend(&stop_drawing_early_suspend_desc);
 	sysfs_remove_group(power_kobj, &attr_group);
 }
 

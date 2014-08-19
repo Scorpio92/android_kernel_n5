@@ -112,7 +112,7 @@
 
 /* kernel includes */
 #include "radio-si470x.h"
-#include <linux/delay.h>
+
 
 
 /**************************************************************************
@@ -123,7 +123,7 @@
 /* 0: 200 kHz (USA, Australia) */
 /* 1: 100 kHz (Europe, Japan) */
 /* 2:  50 kHz */
-static unsigned short space = 1;//wgh add it begin
+static unsigned short space = 2;
 module_param(space, ushort, 0444);
 MODULE_PARM_DESC(space, "Spacing: 0=200kHz 1=100kHz *2=50kHz*");
 
@@ -131,26 +131,24 @@ MODULE_PARM_DESC(space, "Spacing: 0=200kHz 1=100kHz *2=50kHz*");
 /* 0: 87.5 - 108 MHz (USA, Europe)*/
 /* 1: 76   - 108 MHz (Japan wide band) */
 /* 2: 76   -  90 MHz (Japan) */
-static unsigned short band = 0;//jiaobaocun modified for Europe
+static unsigned short band = 1;
 module_param(band, ushort, 0444);
 MODULE_PARM_DESC(band, "Band: 0=87.5..108MHz *1=76..108MHz* 2=76..90MHz");
 
 /* De-emphasis */
 /* 0: 75 us (USA) */
 /* 1: 50 us (Europe, Australia, Japan) */
-static unsigned short de = 0;//lichuangchuang modified form 1
+static unsigned short de = 1;
 module_param(de, ushort, 0444);
 MODULE_PARM_DESC(de, "De-emphasis: 0=75us *1=50us*");
 
 /* Tune timeout */
 static unsigned int tune_timeout = 3000;
-//static unsigned int tune_timeout = 1000;
 module_param(tune_timeout, uint, 0644);
 MODULE_PARM_DESC(tune_timeout, "Tune timeout: *3000*");
 
 /* Seek timeout */
 static unsigned int seek_timeout = 5000;
-//static unsigned int seek_timeout = 1000;
 module_param(seek_timeout, uint, 0644);
 MODULE_PARM_DESC(seek_timeout, "Seek timeout: *5000*");
 
@@ -168,7 +166,7 @@ static int si470x_set_chan(struct si470x_device *radio, unsigned short chan)
 	int retval;
 	unsigned long timeout;
 	bool timed_out = 0;
-	int i;
+
 	/* start tuning */
 	radio->registers[CHANNEL] &= ~CHANNEL_CHAN;
 	radio->registers[CHANNEL] |= CHANNEL_TUNE | chan;
@@ -180,7 +178,6 @@ static int si470x_set_chan(struct si470x_device *radio, unsigned short chan)
 	if (radio->stci_enabled) {
 		INIT_COMPLETION(radio->completion);
 
-		pr_err("jiaobaocun tune \n");
 		/* wait till tune operation has completed */
 		retval = wait_for_completion_timeout(&radio->completion,
 				msecs_to_jiffies(tune_timeout));
@@ -188,7 +185,6 @@ static int si470x_set_chan(struct si470x_device *radio, unsigned short chan)
 			timed_out = true;
 	} else {
 		/* wait till tune operation has completed */
-		pr_err("jiaobaocun tune 2 \n");
 		timeout = jiffies + msecs_to_jiffies(tune_timeout);
 		do {
 			retval = si470x_get_register(radio, STATUSRSSI);
@@ -200,23 +196,16 @@ static int si470x_set_chan(struct si470x_device *radio, unsigned short chan)
 	}
 
 	if ((radio->registers[STATUSRSSI] & STATUSRSSI_STC) == 0)
-		dev_err(&radio->videodev->dev, "jiaobaocun tune not timeout does not complete\n");
+		dev_warn(&radio->videodev->dev, "tune does not complete\n");
 	if (timed_out)
-		dev_err(&radio->videodev->dev,
-			" jiaobaocun tune timed out after %u ms\n", tune_timeout);
-
-		for(i=0; i < 16;i++)
-		{
-		retval = si470x_get_register(radio, i);
-		}
-
+		dev_warn(&radio->videodev->dev,
+			"tune timed out after %u ms\n", tune_timeout);
 
 stop:
 	/* stop tuning */
 	radio->registers[CHANNEL] &= ~CHANNEL_TUNE;
 	retval = si470x_set_register(radio, CHANNEL);
-	pr_err("jiaobaocun tune stop \n");
-	retval = si470x_get_register(radio, 3);
+
 done:
 	return retval;
 }
@@ -230,6 +219,7 @@ static int si470x_get_freq(struct si470x_device *radio, unsigned int *freq)
 	unsigned int spacing, band_bottom;
 	unsigned short chan;
 	int retval;
+
 	/* Spacing (kHz) */
 	switch ((radio->registers[SYSCONFIG2] & SYSCONFIG2_SPACE) >> 4) {
 	/* 0: 200 kHz (USA, Australia) */
@@ -262,7 +252,7 @@ static int si470x_get_freq(struct si470x_device *radio, unsigned int *freq)
 
 	/* Frequency (MHz) = Spacing (kHz) x Channel + Bottom of Band (MHz) */
 	*freq = chan * spacing + band_bottom;
-	printk("jiaobaocun si470x_get_freq, freq = %d. \n", (10 * (*freq) / 16000));
+
 	return retval;
 }
 
@@ -274,8 +264,7 @@ int si470x_set_freq(struct si470x_device *radio, unsigned int freq)
 {
 	unsigned int spacing, band_bottom;
 	unsigned short chan;
-	printk("jiaobaocun si470x_set_freq, freq = %d, space = %d, band_bottom = %d. \n", (10 * freq / 16000), 
-		((radio->registers[SYSCONFIG2] & SYSCONFIG2_SPACE) >> 4), ((radio->registers[SYSCONFIG2] & SYSCONFIG2_BAND) >> 6));
+
 	/* Spacing (kHz) */
 	switch ((radio->registers[SYSCONFIG2] & SYSCONFIG2_SPACE) >> 4) {
 	/* 0: 200 kHz (USA, Australia) */
@@ -293,13 +282,13 @@ int si470x_set_freq(struct si470x_device *radio, unsigned int freq)
 	switch ((radio->registers[SYSCONFIG2] & SYSCONFIG2_BAND) >> 6) {
 	/* 0: 87.5 - 108 MHz (USA, Europe) */
 	case 0:
-		band_bottom = 87.5 * FREQ_MUL;break;
+		band_bottom = 87.5 * FREQ_MUL; break;
 	/* 1: 76   - 108 MHz (Japan wide band) */
 	default:
-		band_bottom = 76   * FREQ_MUL;break;
+		band_bottom = 76   * FREQ_MUL; break;
 	/* 2: 76   -  90 MHz (Japan) */
 	case 2:
-		band_bottom = 76   * FREQ_MUL;break;
+		band_bottom = 76   * FREQ_MUL; break;
 	};
 
 	/* Chan = [ Freq (Mhz) - Bottom of Band (MHz) ] / Spacing (kHz) */
@@ -318,7 +307,7 @@ static int si470x_set_seek(struct si470x_device *radio,
 	int retval = 0;
 	unsigned long timeout;
 	bool timed_out = 0;
-	int i;
+
 	/* start seeking */
 	radio->registers[POWERCFG] |= POWERCFG_SEEK;
 	if (wrap_around == 1)
@@ -336,14 +325,13 @@ static int si470x_set_seek(struct si470x_device *radio,
 	/* currently I2C driver only uses interrupt way to seek */
 	if (radio->stci_enabled) {
 		INIT_COMPLETION(radio->completion);
-		pr_err("jiaobaocun seek\n");
+
 		/* wait till seek operation has completed */
 		retval = wait_for_completion_timeout(&radio->completion,
 				msecs_to_jiffies(seek_timeout));
 		if (!retval)
 			timed_out = true;
 	} else {
-		pr_err("jiaobaocun seek2\n");
 		/* wait till seek operation has completed */
 		timeout = jiffies + msecs_to_jiffies(seek_timeout);
 		do {
@@ -355,34 +343,20 @@ static int si470x_set_seek(struct si470x_device *radio,
 				&& (!timed_out));
 	}
 
-	if ((radio->registers[STATUSRSSI] & STATUSRSSI_STC) == 0){
-		dev_err(&radio->videodev->dev, "jiaobaocun seek does not complete\n");
-		retval = -7;
-		goto stop;
-	}
-	if (radio->registers[STATUSRSSI] & STATUSRSSI_SF){
-		dev_err(&radio->videodev->dev,
-			"jiaobaocun seek failed / band limit reached\n");
-		retval = -8;
-		goto stop;
-	}
-	if (timed_out){
-		dev_err(&radio->videodev->dev,
-			"jiaobaocun seek timed out after %u ms\n", seek_timeout);
-		retval = -9;
-		goto stop;
-	}
-
-	for(i=0; i < 16;i++)
-	{
-		si470x_get_register(radio, i);
-	}
+	if ((radio->registers[STATUSRSSI] & STATUSRSSI_STC) == 0)
+		dev_warn(&radio->videodev->dev, "seek does not complete\n");
+	if (radio->registers[STATUSRSSI] & STATUSRSSI_SF)
+		dev_warn(&radio->videodev->dev,
+			"seek failed / band limit reached\n");
+	if (timed_out)
+		dev_warn(&radio->videodev->dev,
+			"seek timed out after %u ms\n", seek_timeout);
 
 stop:
-	/* stop seeking */	
+	/* stop seeking */
 	radio->registers[POWERCFG] &= ~POWERCFG_SEEK;
-	si470x_set_register(radio, POWERCFG);
-	pr_err("jiaobaocun stop seek. wrap_around = %d, seek_upward = %d\n", wrap_around, seek_upward);
+	retval = si470x_set_register(radio, POWERCFG);
+
 done:
 	/* try again, if timed out */
 	if ((retval == 0) && timed_out)
@@ -398,14 +372,13 @@ done:
 int si470x_start(struct si470x_device *radio)
 {
 	int retval;
-	printk("jiaobaocun si470x_start\n");
+
 	/* powercfg */
 	radio->registers[POWERCFG] =
 		POWERCFG_DMUTE | POWERCFG_ENABLE | POWERCFG_RDSM;
 	retval = si470x_set_register(radio, POWERCFG);
 	if (retval < 0)
 		goto done;
-    msleep(110);
 
 	/* sysconfig 1 */
 	radio->registers[SYSCONFIG1] =
@@ -416,25 +389,14 @@ int si470x_start(struct si470x_device *radio)
 
 	/* sysconfig 2 */
 	radio->registers[SYSCONFIG2] =
-		(SEEKTH_FM  << 8) |				/* SEEKTH *///lichuangchuang mod from 0x3f
+		(0x3f  << 8) |				/* SEEKTH */
 		((band  << 6) & SYSCONFIG2_BAND)  |	/* BAND */
 		((space << 4) & SYSCONFIG2_SPACE) |	/* SPACE */
-		0;					/* VOLUME (max) */
+		15;					/* VOLUME (max) */
 	retval = si470x_set_register(radio, SYSCONFIG2);
 	if (retval < 0)
 		goto done;
 
-	/* enable RDS / STC interrupt */
-#ifdef USE_INITIAL_WAY         //lichuangchuang mod
-	radio->registers[SYSCONFIG1] |= SYSCONFIG1_RDSIEN;
-	radio->registers[SYSCONFIG1] |= SYSCONFIG1_STCIEN;
-#else
-	radio->registers[SYSCONFIG1] &= ~SYSCONFIG1_RDSIEN;
-	radio->registers[SYSCONFIG1] &= ~SYSCONFIG1_STCIEN;
-#endif
-	radio->registers[SYSCONFIG1] &= ~SYSCONFIG1_GPIO2;
-	radio->registers[SYSCONFIG1] |= 0x1 << 2;
-	retval = si470x_set_register(radio, SYSCONFIG1);
 	/* reset last channel */
 	retval = si470x_set_chan(radio,
 		radio->registers[CHANNEL] & CHANNEL_CHAN);
@@ -450,7 +412,7 @@ done:
 int si470x_stop(struct si470x_device *radio)
 {
 	int retval;
-	printk("jiaobaocun si470x_stop\n");
+
 	/* sysconfig 1 */
 	radio->registers[SYSCONFIG1] &= ~SYSCONFIG1_RDS;
 	retval = si470x_set_register(radio, SYSCONFIG1);
@@ -474,7 +436,7 @@ done:
 static int si470x_rds_on(struct si470x_device *radio)
 {
 	int retval;
-	printk("jiaobaocun si470x_rds_on\n");
+
 	/* sysconfig 1 */
 	radio->registers[SYSCONFIG1] |= SYSCONFIG1_RDS;
 	retval = si470x_set_register(radio, SYSCONFIG1);
@@ -499,7 +461,7 @@ static ssize_t si470x_fops_read(struct file *file, char __user *buf,
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
 	unsigned int block_count = 0;
-	printk("jiaobaocun si470x_fops_read\n");
+
 	/* switch on rds reception */
 	mutex_lock(&radio->lock);
 	if ((radio->registers[SYSCONFIG1] & SYSCONFIG1_RDS) == 0)
@@ -558,7 +520,7 @@ static unsigned int si470x_fops_poll(struct file *file,
 	int retval = 0;
 
 	/* switch on rds reception */
-	printk("jiaobaocun si470x_fops_poll\n");
+
 	mutex_lock(&radio->lock);
 	if ((radio->registers[SYSCONFIG1] & SYSCONFIG1_RDS) == 0)
 		si470x_rds_on(radio);
@@ -599,7 +561,7 @@ static int si470x_vidioc_queryctrl(struct file *file, void *priv,
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = -EINVAL;
-	printk("jiaobaocun si470x_vidioc_queryctrl\n");
+
 	/* abort if qc->id is below V4L2_CID_BASE */
 	if (qc->id < V4L2_CID_BASE)
 		goto done;
@@ -635,7 +597,7 @@ static int si470x_vidioc_g_ctrl(struct file *file, void *priv,
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
-	printk("jiaobaocun si470x_vidioc_g_ctrl\n");
+
 	mutex_lock(&radio->lock);
 	/* safety checks */
 	retval = si470x_disconnect_check(radio);
@@ -673,7 +635,7 @@ static int si470x_vidioc_s_ctrl(struct file *file, void *priv,
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
-	printk("jiaobaocun si470x_vidioc_s_ctrl\n");
+
 	mutex_lock(&radio->lock);
 	/* safety checks */
 	retval = si470x_disconnect_check(radio);
@@ -685,7 +647,6 @@ static int si470x_vidioc_s_ctrl(struct file *file, void *priv,
 		radio->registers[SYSCONFIG2] &= ~SYSCONFIG2_VOLUME;
 		radio->registers[SYSCONFIG2] |= ctrl->value;
 		retval = si470x_set_register(radio, SYSCONFIG2);
-		pr_err("jiaobaocun si470x_vidioc_s_ctrl V4L2_CID_AUDIO_VOLUME ctrl->value = %d\n",ctrl->value);
 		break;
 	case V4L2_CID_AUDIO_MUTE:
 		if (ctrl->value == 1)
@@ -693,13 +654,9 @@ static int si470x_vidioc_s_ctrl(struct file *file, void *priv,
 		else
 			radio->registers[POWERCFG] |= POWERCFG_DMUTE;
 		retval = si470x_set_register(radio, POWERCFG);
-		pr_err("jiaobaocun si470x_vidioc_s_ctrl V4L2_CID_AUDIO_MUTE\n");
 		break;
 	default:
-		pr_err("jiaobaocun err_s_ctrl return 0\n");
-		//luxiazi modify
-		//retval = -EINVAL;
-		retval = 0;
+		retval = -EINVAL;
 	}
 
 done:
@@ -722,7 +679,7 @@ static int si470x_vidioc_g_audio(struct file *file, void *priv,
 	strcpy(audio->name, "Radio");
 	audio->capability = V4L2_AUDCAP_STEREO;
 	audio->mode = 0;
-	printk("jiaobaocun si470x_vidioc_g_audio\n");
+
 	return 0;
 }
 
@@ -735,7 +692,7 @@ static int si470x_vidioc_g_tuner(struct file *file, void *priv,
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
-	printk("jiaobaocun si470x_vidioc_g_tuner\n");
+
 	mutex_lock(&radio->lock);
 	/* safety checks */
 	retval = si470x_disconnect_check(radio);
@@ -819,48 +776,16 @@ static int si470x_vidioc_s_tuner(struct file *file, void *priv,
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
-	printk("jiaobaocun si470x_vidioc_s_tuner\n");
+
 	mutex_lock(&radio->lock);
 	/* safety checks */
 	retval = si470x_disconnect_check(radio);
 	if (retval)
 		goto done;
 
-	if (tuner->index != 0){
-		printk("jiaobaocun si470x_vidioc_s_tuner tuner->index != 0\n");
-		retval = -EINVAL;
-		goto done;
-	}
-	
-	de = tuner->reserved[0];
-	/* set de*/
-	radio->registers[SYSCONFIG1] &= ~SYSCONFIG1_DE;		/* DE*/
-	radio->registers[SYSCONFIG1] |= (de << 11) & SYSCONFIG1_DE;		/* DE*/
-	retval = si470x_set_register(radio, SYSCONFIG1);
-	if (retval < 0)
-		goto done;
-	space = tuner->reserved[1];
-	if((tuner->rangelow == 87500) && (tuner->rangehigh == 108000))
-		band = 0;
-	else if((tuner->rangelow == 76000) && (tuner->rangehigh == 108000))
-		band = 1;
-	else if((tuner->rangelow == 76000) && (tuner->rangehigh == 90000))
-		band = 2;
-	else
-		band = 0;
-	/* set band & space */
-	radio->registers[SYSCONFIG2] &=
-		~((SYSCONFIG2_BAND)  |	/* BAND */
-		(SYSCONFIG2_SPACE)); 	/* SPACE */
-	radio->registers[SYSCONFIG2] |=
-		((band  << 6) & SYSCONFIG2_BAND)  |	/* BAND */
-		((space << 4) & SYSCONFIG2_SPACE); 	/* SPACE */
-	retval = si470x_set_register(radio, SYSCONFIG2);
-	if (retval < 0)
+	if (tuner->index != 0)
 		goto done;
 
-	printk("jiaobaocun si470x_FM_set_mode, audmode = %d, de = %d, band = %d, space = %d. \n", tuner->audmode, de, band, space);
-	
 	/* mono/stereo selector */
 	switch (tuner->audmode) {
 	case V4L2_TUNER_MODE_MONO:
@@ -892,7 +817,7 @@ static int si470x_vidioc_g_frequency(struct file *file, void *priv,
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
-	printk("jiaobaocun si470x_vidioc_g_frequency\n");
+
 	/* safety checks */
 	mutex_lock(&radio->lock);
 	retval = si470x_disconnect_check(radio);
@@ -900,8 +825,8 @@ static int si470x_vidioc_g_frequency(struct file *file, void *priv,
 		goto done;
 
 	if (freq->tuner != 0) {
-		//retval = -EINVAL;
-		//goto done;
+		retval = -EINVAL;
+		goto done;
 	}
 
 	freq->type = V4L2_TUNER_RADIO;
@@ -924,6 +849,7 @@ static int si470x_vidioc_s_frequency(struct file *file, void *priv,
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
+
 	mutex_lock(&radio->lock);
 	/* safety checks */
 	retval = si470x_disconnect_check(radio);
@@ -931,15 +857,12 @@ static int si470x_vidioc_s_frequency(struct file *file, void *priv,
 		goto done;
 
 	if (freq->tuner != 0) {
-
-		printk("jiaobaocun freq->tuner != 0\n");
-		//retval = -EINVAL;
-		//goto done;
+		retval = -EINVAL;
+		goto done;
 	}
-	
+
 	retval = si470x_set_freq(radio, freq->frequency);
-	//jiaobaocun added
-	//radio->seek_completion = 0;
+
 done:
 	if (retval < 0)
 		dev_warn(&radio->videodev->dev,
@@ -957,7 +880,7 @@ static int si470x_vidioc_s_hw_freq_seek(struct file *file, void *priv,
 {
 	struct si470x_device *radio = video_drvdata(file);
 	int retval = 0;
-	printk("jiaobaocun si470x_vidioc_s_hw_freq_seek\n");
+
 	mutex_lock(&radio->lock);
 	/* safety checks */
 	retval = si470x_disconnect_check(radio);
@@ -965,9 +888,8 @@ static int si470x_vidioc_s_hw_freq_seek(struct file *file, void *priv,
 		goto done;
 
 	if (seek->tuner != 0) {
-		printk("jiaobaocun seek->tuner==0\n");
-		//retval = -EINVAL;
-		//goto done;
+		retval = -EINVAL;
+		goto done;
 	}
 
 	retval = si470x_set_seek(radio, seek->wrap_around, seek->seek_upward);

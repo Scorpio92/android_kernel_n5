@@ -30,6 +30,10 @@
 #include <linux/spinlock_types.h>
 #include <linux/slab.h>
 #include <linux/input.h>
+#include <linux/init.h>
+#include <linux/cdev.h>
+#include <linux/device.h>
+#include <linux/earlysuspend.h>
 
 #include "MHL_SiI8334.h"
 #include "si_mhl_tx_api.h"
@@ -38,7 +42,10 @@
 #include "si_mhl_defs.h"
 
 //interrupt mode or polling mode for 8334 driver (if you want to use polling mode, pls comment below sentense)
-#define SiI8334DRIVER_INTERRUPT_MODE   1    //DangXiao
+#define SiI8334DRIVER_INTERRUPT_MODE   1
+/*added by congshan 20130221 start*/
+#define ZTE_MHL_INTERRUPT_FALLINGEDGE 1
+/*added by congshan 20130221 end*/
 
 //Debug test
 #undef dev_info
@@ -62,17 +69,40 @@ typedef struct {
 
 MHL_DRIVER_CONTEXT_T gDriverContext;
 
-
+/*added by congshan 20121008 start*/
 struct platform_data {
-//zhangqi add begin
-	int irq;
-	int (*gpio_setup)(int on);
-	void (*reset_pin)(int on);
-	//void (*reset) (void);
-//zhangqi add end
+		int irq;
+		/* GPIO no. for mhl intr */
+		uint32_t gpio_mhl_int;
+		/* GPIO no. for mhl block reset */
+		uint32_t gpio_mhl_reset;
+		/*
+		 * below gpios are specific to targets
+		 * that have the integrated MHL soln.
+		 */
+		/* GPIO no. for mhl block power */
+		uint32_t gpio_mhl_power;
+		/* GPIO no. for hdmi-mhl mux */
+		uint32_t gpio_hdmi_mhl_mux;
+		bool mhl_enabled;
+#ifdef CONFIG_ZTEMT_MHL_8064
+		void (*reset)(void);
+		void (*gpio_input)(void);
+		int (*mhl_power)(int on);
+#endif
+
 };
+/*added by congshan 20121008 end*/
 
 static struct platform_data *Sii8334_plat_data;
+/* added by congshan 20121019 start*/
+static void mhl_early_suspend(struct early_suspend *h);
+static void mhl_early_resume(struct early_suspend *h);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static struct early_suspend Sii8334_early_suspend;
+#endif
+/* added by congshan 20121019 end*/
+
 
 
 bool_t	vbusPowerState = true;		// false: 0 = vbus output on; true: 1 = vbus output off;
@@ -88,25 +118,35 @@ static bool_t match_id(const struct i2c_device_id *id, const struct i2c_client *
 
 static bool_t Sii8334_mhl_reset(void)
 {
-//zhangqi add  begin
 	Sii8334_plat_data = sii8334_PAGE_TPI->dev.platform_data;
-	if (Sii8334_plat_data->gpio_setup){
-		Sii8334_plat_data->gpio_setup(1);
-		}
-
-
-	if (Sii8334_plat_data->reset_pin){
-		Sii8334_plat_data->reset_pin(1);
-		msleep(20);
-		Sii8334_plat_data->reset_pin(0);
-		msleep(20);
-		Sii8334_plat_data->reset_pin(1);
-		msleep(100);
+	if (Sii8334_plat_data->reset){
+		Sii8334_plat_data->reset();
 		return true;
-		}
-//zhangqi add end
+	}
 	return false;
 }
+
+/*added by congshan 20121008 start*/
+
+static bool_t Sii8334_mhl_gpio_in(void)
+{
+	Sii8334_plat_data = sii8334_PAGE_TPI->dev.platform_data;
+	if (Sii8334_plat_data->gpio_input){
+		Sii8334_plat_data->gpio_input();
+		return true;
+	}
+	return false;
+}
+static bool_t Sii8334_mhl_power_on(int on)
+{
+	Sii8334_plat_data = sii8334_PAGE_TPI->dev.platform_data;
+	if (Sii8334_plat_data->mhl_power){
+		Sii8334_plat_data->mhl_power(on);
+		return true;
+	}
+	return false;
+}
+/*added by congshan 20121008 end*/
 
 //------------------------------------------------------------------------------
 // Function:    HalTimerWait
@@ -117,6 +157,203 @@ void HalTimerWait ( uint16_t ms )
 {
 	msleep(ms);
 }
+
+/*************************************RCP function report added by garyyuan*********************************/
+struct input_dev *rmt_input=NULL;
+
+void mhl_init_rmt_input_dev(void)
+{
+	printk(KERN_INFO "%s:%d:.................................................\n", __func__,__LINE__);
+	rmt_input = input_allocate_device();	
+    rmt_input->name = "mhl_rcp";
+	
+    set_bit(EV_KEY,rmt_input->evbit);
+    set_bit(KEY_SELECT, rmt_input->keybit);
+    set_bit(KEY_UP, rmt_input->keybit);
+    set_bit(KEY_DOWN, rmt_input->keybit);
+    set_bit(KEY_LEFT, rmt_input->keybit);
+    set_bit(KEY_RIGHT, rmt_input->keybit);
+
+    set_bit(KEY_MENU, rmt_input->keybit);
+
+    set_bit(KEY_EXIT, rmt_input->keybit);
+	
+    set_bit(KEY_NUMERIC_0, rmt_input->keybit);
+    set_bit(KEY_NUMERIC_1,rmt_input->keybit);
+    set_bit(KEY_NUMERIC_2, rmt_input->keybit);
+    set_bit(KEY_NUMERIC_3, rmt_input->keybit);
+    set_bit(KEY_NUMERIC_4, rmt_input->keybit);
+    set_bit(KEY_NUMERIC_5, rmt_input->keybit);
+    set_bit(KEY_NUMERIC_6,rmt_input->keybit);
+    set_bit(KEY_NUMERIC_7, rmt_input->keybit);
+    set_bit(KEY_NUMERIC_8, rmt_input->keybit);
+    set_bit(KEY_NUMERIC_9, rmt_input->keybit);
+	
+    set_bit(KEY_ENTER, rmt_input->keybit);
+    set_bit(KEY_CLEAR, rmt_input->keybit);
+  
+    set_bit(KEY_PLAY, rmt_input->keybit);
+    set_bit(KEY_STOP, rmt_input->keybit);
+    set_bit(KEY_PAUSE, rmt_input->keybit);
+    
+    set_bit(KEY_REWIND, rmt_input->keybit);
+    set_bit(KEY_FASTFORWARD, rmt_input->keybit);
+    set_bit(KEY_EJECTCD, rmt_input->keybit);
+    set_bit(KEY_FORWARD, rmt_input->keybit);
+    set_bit(KEY_BACK, rmt_input->keybit);
+}
+
+void input_report_rcp_key(uint8_t rcp_keycode, int up_down)
+{
+    rcp_keycode &= 0x7F;
+    switch ( rcp_keycode )
+    {
+    case MHL_RCP_CMD_SELECT:
+        input_report_key(rmt_input, KEY_SELECT, up_down);
+        TX_DEBUG_PRINT(( "\nSelect received\n\n" ));
+        break;
+    case MHL_RCP_CMD_UP:
+        input_report_key(rmt_input, KEY_UP, up_down);
+        TX_DEBUG_PRINT(( "\nUp received\n\n" ));
+        break;
+    case MHL_RCP_CMD_DOWN:
+        input_report_key(rmt_input, KEY_DOWN, up_down);
+        TX_DEBUG_PRINT(( "\nDown received\n\n" ));
+        break;
+    case MHL_RCP_CMD_LEFT:
+        input_report_key(rmt_input, KEY_LEFT, up_down);
+        TX_DEBUG_PRINT(( "\nLeft received\n\n" ));
+        break;
+    case MHL_RCP_CMD_RIGHT:
+        input_report_key(rmt_input, KEY_RIGHT, up_down);
+        TX_DEBUG_PRINT(( "\nRight received\n\n" ));
+        break;
+    case MHL_RCP_CMD_ROOT_MENU:
+        input_report_key(rmt_input, KEY_MENU, up_down);
+        TX_DEBUG_PRINT(( "\nRoot Menu received\n\n" ));
+        break;
+    case MHL_RCP_CMD_EXIT:
+        input_report_key(rmt_input, KEY_EXIT, up_down);
+        TX_DEBUG_PRINT(( "\nExit received\n\n" ));
+        break;
+    case MHL_RCP_CMD_NUM_0:
+        input_report_key(rmt_input, KEY_NUMERIC_0, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 0 received\n\n" ));
+        break;
+    case MHL_RCP_CMD_NUM_1:
+        input_report_key(rmt_input, KEY_NUMERIC_1, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 1 received\n\n" ));
+        break;
+    case MHL_RCP_CMD_NUM_2:
+        input_report_key(rmt_input, KEY_NUMERIC_2, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 2 received\n\n" ));
+        break;	
+    case MHL_RCP_CMD_NUM_3:
+        input_report_key(rmt_input, KEY_NUMERIC_3, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 3 received\n\n" ));
+        break;	
+    case MHL_RCP_CMD_NUM_4:
+        input_report_key(rmt_input, KEY_NUMERIC_4, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 4 received\n\n" ));
+        break;
+    case MHL_RCP_CMD_NUM_5:
+        input_report_key(rmt_input, KEY_NUMERIC_5, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 5 received\n\n" ));
+        break;	
+    case MHL_RCP_CMD_NUM_6:
+        input_report_key(rmt_input, KEY_NUMERIC_6, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 6 received\n\n" ));
+        break;
+    case MHL_RCP_CMD_NUM_7:
+        input_report_key(rmt_input, KEY_NUMERIC_7, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 7 received\n\n" ));
+        break;
+    case MHL_RCP_CMD_NUM_8:
+        input_report_key(rmt_input, KEY_NUMERIC_8, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 8 received\n\n" ));
+        break;
+    case MHL_RCP_CMD_NUM_9:
+        input_report_key(rmt_input, KEY_NUMERIC_9, up_down);
+        TX_DEBUG_PRINT(( "\nNumber 9 received\n\n" ));
+        break;
+    case MHL_RCP_CMD_DOT:
+        input_report_key(rmt_input, KEY_DOT, up_down);
+        TX_DEBUG_PRINT(( "\nDot received\n\n" ));
+        break;
+    case MHL_RCP_CMD_ENTER:
+        input_report_key(rmt_input, KEY_ENTER, up_down);
+        TX_DEBUG_PRINT(( "\nEnter received\n\n" ));
+        break;
+    case MHL_RCP_CMD_CLEAR:
+        input_report_key(rmt_input, KEY_CLEAR, up_down);
+        TX_DEBUG_PRINT(( "\nClear received\n\n" ));
+        break;
+    case MHL_RCP_CMD_SOUND_SELECT:
+        input_report_key(rmt_input, KEY_SOUND, up_down);
+        TX_DEBUG_PRINT(( "\nSound Select received\n\n" ));
+        break;
+    case MHL_RCP_CMD_PLAY:
+        input_report_key(rmt_input, KEY_PLAY, up_down);
+        TX_DEBUG_PRINT(( "\nPlay received\n\n" ));
+        break;
+    case MHL_RCP_CMD_PAUSE:
+        input_report_key(rmt_input, KEY_PAUSE, up_down);
+        TX_DEBUG_PRINT(( "\nPause received\n\n" ));
+        break;
+    case MHL_RCP_CMD_STOP:
+        input_report_key(rmt_input, KEY_STOP, up_down);
+        TX_DEBUG_PRINT(( "\nStop received\n\n" ));
+        break;
+    case MHL_RCP_CMD_FAST_FWD:
+        input_report_key(rmt_input, KEY_FASTFORWARD, up_down);
+        TX_DEBUG_PRINT(( "\nFastfwd received\n\n" ));
+        break;
+    case MHL_RCP_CMD_REWIND:
+        input_report_key(rmt_input, KEY_REWIND, up_down);
+        TX_DEBUG_PRINT(( "\nRewind received\n\n" ));
+        break;
+    case MHL_RCP_CMD_EJECT:
+        input_report_key(rmt_input, KEY_EJECTCD, up_down);
+        TX_DEBUG_PRINT(( "\nEject received\n\n" ));
+        break;
+    case MHL_RCP_CMD_FWD:
+        input_report_key(rmt_input, KEY_FORWARD, up_down);
+        TX_DEBUG_PRINT(( "\nForward received\n\n" ));
+        break;
+    case MHL_RCP_CMD_BKWD:
+        input_report_key(rmt_input, KEY_BACK, up_down);
+        TX_DEBUG_PRINT(( "\nBackward received\n\n" ));
+        break;
+    case MHL_RCP_CMD_PLAY_FUNC:
+        //input_report_key(rmt_input, KEY_PL, up_down);
+		input_report_key(rmt_input, KEY_PLAY, up_down);
+        TX_DEBUG_PRINT(( "\nPlay Function received\n\n" ));
+    break;
+    case MHL_RCP_CMD_PAUSE_PLAY_FUNC:
+        input_report_key(rmt_input, KEY_PLAYPAUSE, up_down);
+        TX_DEBUG_PRINT(( "\nPause_Play Function received\n\n" ));
+        break;
+    case MHL_RCP_CMD_STOP_FUNC:
+        input_report_key(rmt_input, KEY_STOP, up_down);
+        TX_DEBUG_PRINT(( "\nStop Function received\n\n" ));
+        break;
+    default:
+        break;
+    }	
+		
+    //added  for improving mhl RCP start
+    input_sync(rmt_input);
+    //added  for improving mhl RCP end
+}
+void input_report_mhl_rcp_key(uint8_t rcp_keycode)
+{
+    //added  for improving mhl RCP start
+    input_report_rcp_key(rcp_keycode & 0x7F, 1);
+    input_report_rcp_key(rcp_keycode & 0x7F, 0);
+    //added  for improving mhl RCP end
+}
+
+/*************************************RCP function report added by garyyuan*********************************/
 
 
 #if (VBUS_POWER_CHK == ENABLE)
@@ -150,17 +387,14 @@ void	AppVbusControl( bool_t powerOn )
 #ifdef SiI8334DRIVER_INTERRUPT_MODE
 
 struct work_struct	*sii8334work;
-//ZTEBSP wangbing, for spinlock init 20130126
-//static spinlock_t sii8334_lock;
-static DEFINE_SPINLOCK(sii8334_lock);
-
+static spinlock_t sii8334_lock ;
 extern uint8_t	fwPowerState;
 
 static void work_queue(struct work_struct *work)
 {	
 
 	//for(Int_count=0;Int_count<15;Int_count++){
-		printk( "%s::::::::Sii8334 interrupt happened\n", __func__);
+		//printk(KERN_INFO "%s:%d:Int_count=%d::::::::Sii8334 interrupt happened\n", __func__,__LINE__);
 		
 		SiiMhlTxDeviceIsr();
 	enable_irq(sii8334_PAGE_TPI->irq);
@@ -172,8 +406,10 @@ static irqreturn_t Sii8334_mhl_interrupt(int irq, void *dev_id)
 	disable_irq_nosync(irq);
 	spin_lock_irqsave(&sii8334_lock, lock_flags);	
 	//printk("The sii8334 interrupt handeler is working..\n");  
-	printk("The most of sii8334 interrupt work will be done by following tasklet..\n");  
-
+	/*added by congshan 20121224 start*/
+	//printk("The most of sii8334 interrupt work will be done by following tasklet..\n");  
+	/*added by congshan 20121224 end*/
+	//pr_err("sss %s\n", __func__);
 	schedule_work(sii8334work);
 
 	//printk("The sii8334 interrupt's top_half has been done and bottom_half will be processed..\n");  
@@ -255,13 +491,11 @@ static int __devinit mhl_Sii8334_probe(struct i2c_client *client,
 			const struct i2c_device_id *dev_id)
 {
 	int ret = 0;
-
-	
 	if(match_id(&mhl_Sii8334_idtable[0], client))
 	{
 		sii8334_PAGE_TPI = client;
-		dev_info(&client->adapter->dev, "attached %s "
-			"into i2c adapter successfully\n", dev_id->name);
+		//dev_info(&client->adapter->dev, "attached %s "
+		//	"into i2c adapter successfully\n", dev_id->name);
 	}
 	/*
 	else if(match_id(&mhl_Sii8334_idtable[1], client))
@@ -274,26 +508,26 @@ static int __devinit mhl_Sii8334_probe(struct i2c_client *client,
 	else if(match_id(&mhl_Sii8334_idtable[2], client))
 	{
 		sii8334_PAGE_TX_L1 = client;
-		dev_info(&client->adapter->dev, "attached %s "
-			"into i2c adapter successfully \n", dev_id->name);
+	//	dev_info(&client->adapter->dev, "attached %s "
+	//		"into i2c adapter successfully \n", dev_id->name);
 	}
 	else if(match_id(&mhl_Sii8334_idtable[3], client))
 	{
 		sii8334_PAGE_TX_2 = client;
-		dev_info(&client->adapter->dev, "attached %s "
-			"into i2c adapter successfully\n", dev_id->name);
+	//	dev_info(&client->adapter->dev, "attached %s "
+	//		"into i2c adapter successfully\n", dev_id->name);
 	}
 	else if(match_id(&mhl_Sii8334_idtable[4], client))
 	{
 		sii8334_PAGE_TX_3 = client;
-		dev_info(&client->adapter->dev, "attached %s "
-			"into i2c adapter successfully\n", dev_id->name);
+		//dev_info(&client->adapter->dev, "attached %s "
+		//	"into i2c adapter successfully\n", dev_id->name);
 	}
 	else if(match_id(&mhl_Sii8334_idtable[5], client))
 	{
 		sii8334_PAGE_CBUS = client;
-		dev_info(&client->adapter->dev, "attached %s "
-			"into i2c adapter successfully\n", dev_id->name);
+		//dev_info(&client->adapter->dev, "attached %s "
+		//	"into i2c adapter successfully\n", dev_id->name);
 	}
 	else
 	{
@@ -311,59 +545,91 @@ static int __devinit mhl_Sii8334_probe(struct i2c_client *client,
 	{
 		// Announce on RS232c port.
 		//
-		printk("\n============================================\n");
-		printk("SiI-8334 Driver Version based on 8051 driver Version 1.0066 \n");
-		printk("============================================\n");
-		
+		//printk("\n============================================\n");
+		//printk("SiI-8334 Driver Version based on 8051 driver Version 1.0066 \n");
+		//printk("============================================\n");
+		/*added by congshan 20121008 start*/
+		if(false == Sii8334_mhl_power_on(1)){
+			printk("/nCan't find the Sii8334_mhl_power_on function in your platform file============================================\n");
+			return -EIO;
+		}
+		/*added by congshan 20121008 end*/
 		if(false == Sii8334_mhl_reset()){
 			printk("/nCan't find the reset function in your platform file============================================\n");
 			return -EIO;
 			}
-
+		/*added by congshan 20121008 start*/
+		if(false == Sii8334_mhl_gpio_in()){
+			printk("/nCan't find the Sii8334_mhl_gpio_in function in your platform file============================================\n");
+			return -EIO;
+		}
+		/*added by congshan 20121008 end*/
 		//
 		// Initialize the registers as required. Setup firmware vars.
 		//
 	
-		SiiMhlTxInitialize();
 		
+		//for RCP report function by garyyuan
+		mhl_init_rmt_input_dev();		
+
+		SiiMhlTxInitialize();
+
 		#ifdef SiI8334DRIVER_INTERRUPT_MODE
+		/*added by congshan 20121224 start*/
+		spin_lock_init(&sii8334_lock);
+		/*added by congshan 20121224 end*/
 		sii8334work = kmalloc(sizeof(*sii8334work), GFP_ATOMIC);
 		INIT_WORK(sii8334work, work_queue); 
-		
+		/*added by congshan 20130221 start*/
+		#if ZTE_MHL_INTERRUPT_FALLINGEDGE
+		ret = request_irq(sii8334_PAGE_TPI->irq, Sii8334_mhl_interrupt, IRQ_TYPE_EDGE_FALLING,
+					  sii8334_PAGE_TPI->name, sii8334_PAGE_TPI);
+
+		#else
 		ret = request_irq(sii8334_PAGE_TPI->irq, Sii8334_mhl_interrupt, IRQ_TYPE_LEVEL_LOW,
 					  sii8334_PAGE_TPI->name, sii8334_PAGE_TPI);
+		#endif
+		/*added by congshan 20130221 end*/
 		if (ret)
 			printk(KERN_INFO "%s:%d:Sii8334 interrupt failed\n", __func__,__LINE__);	
 			//free_irq(irq, iface);
-		else{
-			enable_irq_wake(sii8334_PAGE_TPI->irq);	
+		else{ //comment for power consumption problem edied by congshan 20121021 start
+			//enable_irq_wake(sii8334_PAGE_TPI->irq);	
+			disable_irq(sii8334_PAGE_TPI->irq);
+			//enable_irq(sii8334_PAGE_TPI->irq);
 			//printk(KERN_INFO "%s:%d:Sii8334 interrupt successed\n", __func__,__LINE__);	
-			}
+			}//comment for power consumption problem edied by congshan 20121021 end
 		#else
 		StartEventThread();		/* begin monitoring for events if using polling mode*/
 		#endif
+		
 	}
 	return ret;
 }
-
+void v5_mhl_enable_irq(void)
+{
+	enable_irq(sii8334_PAGE_TPI->irq);
+}
 static int mhl_Sii8334_remove(struct i2c_client *client)
 {	
 	struct i2c_client *data = i2c_get_clientdata(client);
 		
 	i2c_set_clientdata(client, NULL);
 	kfree(data);
-	dev_info(&client->adapter->dev, "detached %s from i2c adapter successfully\n",client->name);
+	//dev_info(&client->adapter->dev, "detached %s from i2c adapter successfully\n",client->name);
 	
 	return 0;
 }
 
 static int mhl_Sii8334_suspend(struct i2c_client *cl, pm_message_t mesg)
 {
+
 	return 0;
 };
 
 static int mhl_Sii8334_resume(struct i2c_client *cl)
 {
+	
 	return 0;
 };
 
@@ -381,9 +647,34 @@ static struct i2c_driver mhl_Sii8334_driver = {
 	.suspend	= mhl_Sii8334_suspend,
 	.resume 	= mhl_Sii8334_resume,
 };
+/* added by congshan 20121019 start*/
+static void mhl_early_suspend(struct early_suspend *h)
+{
+	disable_irq(sii8334_PAGE_TPI->irq);
+	//disable_irq_wake(sii8334_PAGE_TPI->irq);
+	if(false == Sii8334_mhl_gpio_in()){
+		printk("/nCan't find the Sii8334_mhl_gpio_in function in your platform file============================================\n");
+	}
+	//pr_err("sss %s\n", __func__);
+
+}
+static void mhl_early_resume(struct early_suspend *h)
+{
+	enable_irq(sii8334_PAGE_TPI->irq);
+	//disable_irq_wake(sii8334_PAGE_TPI->irq);
+}
+/* added by congshan 20121019 end*/
 
 static int __init mhl_Sii8334_init(void)
 {
+	/* added by congshan 20121019 start*/
+
+	static struct early_suspend *mhl_suspend;
+	mhl_suspend = &Sii8334_early_suspend;
+	mhl_suspend->suspend = mhl_early_suspend;
+	mhl_suspend->resume = mhl_early_resume;
+//	register_early_suspend(&Sii8334_early_suspend);
+	/* added by congshan 20121019 end*/
 	return i2c_add_driver(&mhl_Sii8334_driver);
 }
 

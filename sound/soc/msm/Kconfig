@@ -147,11 +147,23 @@ config SND_SOC_MSM8960
 	select SND_SOC_WCD9310
 	select SND_SOC_WCD9304
 	select SND_SOC_MSM_HOSTLESS_PCM
-	select SND_SOC_MSM_QDSP6_HDMI_AUDIO
-	select SND_SOC_CS8427
+	select SND_SOC_MSM_QDSP6_HDMI_AUDIO if FB_MSM_HDMI_MSM_PANEL
+	select SND_SOC_CS8427 if !MACH_APQ8064_MAKO
+	select SND_SOC_DUAL_AMIC if MACH_APQ8064_MAKO
+	select SND_SOC_TPA2028D if MACH_APQ8064_MAKO
 	default n
 	help
 	 To add support for SoC audio on MSM8960 and APQ8064 boards
+
+config AUDIO_OCMEM
+	bool "Enable OCMEM for audio/voice usecase"
+	depends on MSM_OCMEM
+	default n
+	help
+	 To add support for on-chip memory use
+	 for audio use cases on MSM8974.
+	 OCMEM gets exercised for low-power
+	 audio and voice use cases.
 
 config SND_SOC_MSM8974
 	tristate "SoC Machine driver for MSM8974 boards"
@@ -159,7 +171,9 @@ config SND_SOC_MSM8974
 	select SND_SOC_QDSP6V2
 	select SND_SOC_MSM_STUB
 	select SND_SOC_MSM_HOSTLESS_PCM
+	select SND_SOC_WCD9320
 	select SND_DYNAMIC_MINORS
+	select AUDIO_OCMEM
 	help
 	 To add support for SoC audio on MSM8974.
 	 This will enable sound soc drivers which
@@ -188,19 +202,11 @@ config SND_SOC_MSM8660_APQ
         default n
         help
          To add support for SoC audio on APQ8060 board
-#ZTEBSP weiguohua, for p864a10 audio driver start,20120907		 
-config ZTE_AVS_COMMON_MODIFY
-         bool "ZTE_AVS_COMMON_MODIFY   for  zte modify  audio driver"
-		 default  y
-		 help  
-		   To add support for zte modify audio driver
 
-#ZTEBSP weiguohua, for p864a10 audio driver end,2012100907
-#ZTEBSP weiguohua, for hp gpio not wake in sleep mode start,20121105		 
-config ZTE_AVS_HP_INT_GPIO_CAN_NOT_WAKE_IN_SLEEP
-         bool "for hp gpio not wake in sleep mode"
-		 default  y
-		 help  
-		   To add support for hp gpio not wake in sleep mode
-#ZTEBSP weiguohua, for hp gpio not wake in sleep mode end,20121105
+config SND_SOC_DUAL_AMIC
+	default n
+	bool "SoC feature for dual analog mic"
+	help
+	 To add support for dual analog mic.
+
 endmenu

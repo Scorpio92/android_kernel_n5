@@ -100,13 +100,11 @@ static int suspend_prepare(void)
 		return -EPERM;
 
 	pm_prepare_console();
-	printk("PM: suspend prepare console ok!\n");
 
 	error = pm_notifier_call_chain(PM_SUSPEND_PREPARE);
 	if (error)
 		goto Finish;
 
-	printk("PM: ready to freeze process \n");
 	error = suspend_freeze_processes();
 	if (!error)
 		return 0;
@@ -114,13 +112,7 @@ static int suspend_prepare(void)
 	suspend_stats.failed_freeze++;
 	dpm_save_failed_step(SUSPEND_FREEZE);
  Finish:
-//wangtao P864A20 bug-detect begin
-printk(KERN_ERR "wangtao-bug-detect: PM_POST_SUSPEND: suspend_prepare -enter: \n"); 
-//wangtao P864A20 bug-detect end
 	pm_notifier_call_chain(PM_POST_SUSPEND);
-//wangtao P864A20 bug-detect begin
-printk(KERN_ERR "wangtao-bug-detect: PM_POST_SUSPEND: suspend_prepare -leave: \n"); 
-//wangtao P864A20 bug-detect end
 	pm_restore_console();
 	return error;
 }
@@ -265,16 +257,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 static void suspend_finish(void)
 {
 	suspend_thaw_processes();
-//wangtao P864A20 bug-detect begin
-printk(KERN_ERR "wangtao-bug-detect: PM_POST_SUSPEND: suspend_finish -enter: \n"); 
-//wangtao P864A20 bug-detect end
-	
 	pm_notifier_call_chain(PM_POST_SUSPEND);
-
-//wangtao P864A20 bug-detect begin
-printk(KERN_ERR "wangtao-bug-detect: PM_POST_SUSPEND: suspend_finish -leave: \n"); 
-//wangtao P864A20 bug-detect end
-
 	pm_restore_console();
 }
 

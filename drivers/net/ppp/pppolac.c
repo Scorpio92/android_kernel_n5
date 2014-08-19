@@ -46,11 +46,6 @@
 
 #define PPP_ADDR	0xFF
 #define PPP_CTRL	0x03
-//zte modify wangpengren if not define PPP_MTU, then define PPP_MTU
-#ifndef PPP_MTU
-#define PPP_MTU       1500
-#endif
-//zte modify end
 
 union unaligned {
 	__u32 u32;
@@ -315,7 +310,7 @@ static int pppolac_connect(struct socket *sock, struct sockaddr *useraddr,
 	po->chan.hdrlen = 12;
 	po->chan.private = sk_udp;
 	po->chan.ops = &pppolac_channel_ops;
-	po->chan.mtu = PPP_MTU - 80;
+	po->chan.mtu = PPP_MRU - 80;
 	po->proto.lac.local = unaligned(&addr->local)->u32;
 	po->proto.lac.remote = unaligned(&addr->remote)->u32;
 	atomic_set(&po->proto.lac.sequencing, 1);

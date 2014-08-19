@@ -62,9 +62,4 @@ obj-$(CONFIG_USB_SERIAL_WHITEHEAT)		+= whiteheat.o
 obj-$(CONFIG_USB_SERIAL_XIRCOM)			+= keyspan_pda.o
 obj-$(CONFIG_USB_SERIAL_VIVOPAY_SERIAL)		+= vivopay-serial.o
 obj-$(CONFIG_USB_SERIAL_ZIO)			+= zio.o
-#ztebsp zhangjing delete for at,20121129,++
-ifdef CONFIG_USB_AT
-else
 obj-$(CONFIG_USB_SERIAL_CSVT)			+= csvt.o
-endif
-#ztebsp zhangjing delete for at,20121129,--

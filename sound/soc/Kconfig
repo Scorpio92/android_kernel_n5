@@ -27,6 +27,24 @@ config SND_SOC_AC97_BUS
 
 config SND_SOC_DMAENGINE_PCM
 	bool
+	
+config ZTEMT_AUDIO
+      bool
+      default y
+      help
+       ZTEMT AUDIO add by zmwu 20121010
+
+config ZTEMT_AUDIO_HANDSET_MIC
+     bool
+     default y
+     help
+       ZTEMT AUDIO add by zmwu 20121010, use anolog mic instead of digital mic
+
+config ZTEMT_AUDIO_DEBUG
+     bool
+     default n
+     help 
+       ZTEMT AUDIO DEBUG add by zmwu 20121010
 
 # All the supported SoCs
 source "sound/soc/atmel/Kconfig"
