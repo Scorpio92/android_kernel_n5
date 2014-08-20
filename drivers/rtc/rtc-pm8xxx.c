@@ -324,6 +324,11 @@ pm8xxx_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 }
 
 
+//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,start.
+/*Solve the alarm can't responsed during sleep,the reason is when calling alarm_suspend()->rtc_set_alarm()
+,in second time,rtc->aie_timer.enabled will be true,then it will call rtc_timer_remove()->rtc_alarm_disable()
+disable the rtc alarm irq,so the alarm is disablede.
+*/
 static int
 pm8xxx_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 {
@@ -336,8 +341,16 @@ pm8xxx_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	ctrl_reg = rtc_dd->ctrl_reg;
 	ctrl_reg = (enabled) ? (ctrl_reg | PM8xxx_RTC_ALARM_ENABLE) :
 				(ctrl_reg & ~PM8xxx_RTC_ALARM_ENABLE);
-
-	rc = pm8xxx_write_wrapper(rtc_dd, &ctrl_reg, rtc_dd->rtc_base, 1);
+				
+	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,start.
+	/*
+	We don't want the wake up timer to control the rtc alarm enable/disable irq,so here we don't write the ctrl_reg
+	to the pmic register. 
+	*/
+	//rc = pm8xxx_write_wrapper(rtc_dd, &ctrl_reg, rtc_dd->rtc_base, 1);//QCT default enable.
+	rc = 0;
+	//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,end.
+	
 	if (rc < 0) {
 		dev_err(dev, "PM8xxx write failed\n");
 		goto rtc_rw_fail;
@@ -349,6 +362,7 @@ rtc_rw_fail:
 	spin_unlock_irqrestore(&rtc_dd->ctrl_reg_lock, irq_flags);
 	return rc;
 }
+//[ECID:0000]ZTE_BSP maxiaoping 20130123 modify PLATFORM 8064 RTC alarm driver,end.
 
 static struct rtc_class_ops pm8xxx_rtc_ops = {
 	.read_time	= pm8xxx_rtc_read_time,
@@ -633,6 +647,139 @@ fail_alarm_disable:
 		spin_unlock_irqrestore(&rtc_dd->ctrl_reg_lock, irq_flags);
 	}
 }
+
+//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,start.
+int msmrtc_rtc_read_alarm_time(struct device *dev, struct rtc_wkalrm *alarm)
+{
+	int rc;
+	rc = pm8xxx_rtc_read_alarm(dev, alarm);
+	return rc;
+}
+int msmrtc_timeremote_clear_rtc_alarm(struct device *dev)
+{
+      int rc = 0;
+      u8 reg;
+      u8 value[4] = {0, 0, 0, 0};	  
+      unsigned long irq_flags;
+      struct platform_device *pdev = container_of(dev, struct platform_device, dev);	  
+      struct pm8xxx_rtc *rtc_dd = dev_get_drvdata(dev);	  	
+      //struct pm8xxx_rtc *rtc_dd = platform_get_drvdata(pdev);
+      struct pm8xxx_rtc_platform_data *pdata = pdev->dev.platform_data;
+
+      //printk("PM_DEBUG_MXP: Enter msmrtc_timeremote_clear_rtc_alarm.\n");
+      if (pdata == NULL)
+      {
+	    printk("PM_DEBUG_MXP: msmrtc_timeremote_clear_rtc_alarm: pdata == NULL.\n");
+	    return -1;
+      }
+      spin_lock_irqsave(&rtc_dd->ctrl_reg_lock, irq_flags);
+      /* Disable RTC alarms */	  
+      dev_dbg(&pdev->dev, "Disabling alarm interrupts\n");
+      reg = rtc_dd->ctrl_reg;	  
+      reg &= ~PM8xxx_RTC_ALARM_ENABLE;
+      rc = pm8xxx_write_wrapper(rtc_dd, &reg, rtc_dd->rtc_base, 1);
+      if (rc < 0) 
+     {
+	    printk("PM_DEBUG_MXP:PM8xxx write failed,disable alarm failed.\n");
+	   
+      } 
+      /* Clear Alarm register */
+      rc = pm8xxx_write_wrapper(rtc_dd, value,rtc_dd->alarm_rw_base, NUM_8_BIT_RTC_REGS);
+     if (rc < 0)
+     {
+	    //dev_err(rtc_dd->rtc_dev, "PM8xxx write failed\n");
+	    printk("PM_DEBUG_MXP:PM8xxx write failed,clear alarm register failed.\n");
+     }	 		
+     spin_unlock_irqrestore(&rtc_dd->ctrl_reg_lock, irq_flags);
+	 
+     //printk("PM_DEBUG_MXP: Exit msmrtc_timeremote_clear_rtc_alarm.\n");	 
+     return rc;
+}
+//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,end.
+
+//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,start.
+int msmrtc_virtual_alarm_set_to_cp(struct device *dev,unsigned long seconds)
+{
+      unsigned long now_time = get_seconds();
+      int diff;  
+      struct rtc_time tm;
+      struct rtc_wkalrm alarm_tm;	  
+      //printk("PM_DEBUG_MXP: alarm_seconds_to_be_set: seconds %ld\n",seconds);
+      //printk("PM_DEBUG_MXP: now_time_seconds is:now_time %ld\n",now_time);
+       diff = seconds-now_time;
+      //printk("PM_DEBUG_MXP: msmrtc_virtual_alarm_set_to_cp diff %d\n",diff);
+      if(diff>0)
+      {
+      	rtc_time_to_tm(seconds,&tm);
+         //printk("PM_DEBUG_MXP: alarm_time_Gregorian: tm.tm_year %d, tm.mon %d, tm.day %d\n",tm.tm_year,tm.tm_mon,tm.tm_mday);
+	//printk("PM_DEBUG_MXP: alarm_time_Gregorian: tm.tm_wday %d, tm.tm_yday %d.\n",tm.tm_wday,tm.tm_yday);	 
+         //printk("PM_DEBUG_MXP: alarm_time_Gregorian: tm.tm_hour %d, tm.min %d, tm.sec %d\n",tm.tm_hour,tm.tm_min,tm.tm_sec);
+	
+      	alarm_tm.enabled = 1;
+	alarm_tm.pending = 0;
+	alarm_tm.time = tm;
+      	pm8xxx_rtc_set_alarm(dev,&alarm_tm);
+      }
+      else
+     {
+	return 0;
+     }
+     return 0;
+}
+//[ECID:0000]ZTE_BSP maxiaoping 20121030 modify PLATFORM 8064 RTC alarm driver for power_off alarm,end.
+
+//[ECID:0000]ZTE_BSP maxiaoping 20121121 modify PLATFORM 8064 RTC alarm  for power_off charging,start.
+int msmrtc_timeremote_get_rtc_alarm_status(struct device*dev)
+{
+	//int rc =0;
+	int rtl =0;
+	struct rtc_wkalrm   zte_rtc_alarm;
+	unsigned long zte_rtc_alarm_sec;
+	unsigned long temp;
+	unsigned long now_time_sec = get_seconds();
+	//struct pm8xxx_rtc *rtc_dd = dev_get_drvdata(dev);
+	
+	//printk("PM_DEBUG_MXP: Enter msmrtc_timeremote_get_rtc_alarm_status.\n");
+	pr_debug("PM_DEBUG_MXP: now_seconds is:now_time_sec = %ld\n",now_time_sec);
+	msmrtc_rtc_read_alarm_time(dev,&zte_rtc_alarm);
+	rtc_tm_to_time(&zte_rtc_alarm.time, &zte_rtc_alarm_sec);//
+	pr_debug("PM_DEBUG_MXP: zte_rtc_alarm_sec= %ld\n",zte_rtc_alarm_sec);//
+	 if (zte_rtc_alarm_sec > now_time_sec)//exchage the value.
+	 {
+	 	temp = zte_rtc_alarm_sec;
+	 	zte_rtc_alarm_sec = now_time_sec;
+	 	now_time_sec = temp;
+	 }
+	 //As RTC has 3 seconds' error and the startup may takes some time,here we give them 5 seconds redundancy.
+	  if ((now_time_sec -zte_rtc_alarm_sec)<=5)
+	  {
+	 	//printk("PM_DEBUG_MXP:RTC ALARM trigger detect.\r\n");
+	 	rtl = 1;
+	  }
+	  else
+	  {
+		//printk("PM_DEBUG_MXP:NO RTC ALARM trigger detect.\r\n");
+		rtl = 0;
+	  }
+	//printk("PM_DEBUG_MXP: rtc_dd->rtc_alarm_irq = %d.\n",rtc_dd->rtc_alarm_irq);
+	//Here dev stand for platform device,so use its parent to correspond with pmic device.
+	//but we can't get the alarm irq triggered always,so we need to read the counter to get the alarm status.
+	//rc =pm8xxx_read_irq_stat(dev->parent, rtc_dd->rtc_alarm_irq);
+	
+	//printk("PM_DEBUG_MXP: Here get rtc alarm status -> rc  = %d.\n",rc);
+	//if((rc == 1)||(rtl == 1))
+	if(rtl == 1)
+	{
+		printk("PM_DEBUG_MXP: Get rtc alarm triggered.\n");
+		return 1;
+	}
+	//printk("PM_DEBUG_MXP: Get rtc alarm not detected.\n");
+	//printk("PM_DEBUG_MXP: Exit msmrtc_timeremote_get_rtc_alarm_status.\n");
+	return 0;
+
+}
+//[ECID:0000]ZTE_BSP maxiaoping 20121121 modify PLATFORM 8064 RTC alarm  for power_off charging,end.
+
 
 static struct platform_driver pm8xxx_rtc_driver = {
 	.probe		= pm8xxx_rtc_probe,

@@ -58,6 +58,23 @@ config RTC_DEBUG
 
 comment "RTC interfaces"
 
+#//[ECID:0000] ZTEBSP maxiaoping 20121030 for alarm in power off charging,start
+config ZTE_FIX_ALARM_SYNC
+	bool "zte code: fix time sync from modem"
+	default n
+	depends on RTC_CLASS
+	help
+	define this feature to enable fix in the RTC framework.
+#//[ECID:0000] ZTEBSP maxiaoping 20121030 for alarm in power off charging,end
+
+	  
+#//[ECID:0000] ZTEBSP maxiaoping 20121030 for alarm in power off charging,start
+config ZTE_POWER_OFF_ALARM	
+	bool "Module which is to show whether alarm2 is triggered during power off charging"	
+	---help---	
+	zte power off alarm module
+#//[ECID:0000] ZTEBSP maxiaoping 20121030 for alarm in power off charging,end
+
 config RTC_INTF_SYSFS
 	boolean "/sys/class/rtc/rtcN (sysfs)"
 	depends on SYSFS
@@ -1177,5 +1194,10 @@ config RTC_DRV_QPNP
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called qpnp-rtc.
+
+#zhangbo add time sync with modem to fix time jump problem
+config ZTE_TIME_SYNC_WITH_MODEM
+	bool "sync time between modem and ap"
+	default y
 
 endif # RTC_CLASS
