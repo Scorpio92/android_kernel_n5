@@ -286,7 +286,8 @@ obj-$(CONFIG_MACH_MSM8930_CDP) += board-8930-all.o board-8930-regulator-pm8038.o
 obj-$(CONFIG_MACH_MSM8930_MTP) += board-8930-all.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
 obj-$(CONFIG_MACH_MSM8930_FLUID) += board-8930-all.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
 obj-$(CONFIG_MACH_MSM8930_EVT) += board-8930-all.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
-obj-$(CONFIG_PM8921_BMS) += bms-batterydata.o bms-batterydata-desay.o batterydata-lib.o
+#[ECID:000000] ZTBSP zhangbo change for charging
+obj-$(CONFIG_PM8921_BMS) += bms-batterydata.o bms-batterydata-desay.o bms-batterydata-zte.o
 #ZTEMT Added by wangshuai 2012-11-12
 obj-$(CONFIG_ZTEMT_CHARGE) += bms_ztemt_batterydata_2300mAh.o
 obj-$(CONFIG_ZTEMT_BATTERY_2000MAH) += bms_ztemt_batterydata_2000mAh.o

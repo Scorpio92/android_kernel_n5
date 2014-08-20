@@ -3169,10 +3169,7 @@ static void __init msm8930_cdp_init(void)
 #ifndef MSM8930_PHASE_2
 	msm8960_pm8921_gpio_mpp_init();
 #else
-	if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917)
-		msm8930_pm8038_gpio_mpp_init();
-	else
-		msm8930_pm8917_gpio_mpp_init();
+	msm8930_pm8038_gpio_mpp_init();
 #endif
 	platform_add_devices(cdp_devices, ARRAY_SIZE(cdp_devices));
 #ifdef CONFIG_MSM_CAMERA

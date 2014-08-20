@@ -489,12 +489,6 @@ config ZTEMT_AUDIO_DMIC
       default n
       help
        ZTEMT AUDIO add by sunli 20131009
-
- config ZTEMT_BATTERY_2000MAH
-      bool "ZTEMT Z5smini battery for 2000mAh"
-      default n
-      help
-       ZTEMT Z5smini battery for 2000mAh
        
 config MSM_XO
 	bool
@@ -2678,5 +2672,35 @@ config MSM_USE_USER_ACCESSIBLE_TIMERS
 	help
 	  Enables MSM-specific user accessible timers via a shared
 	  memory page containing the cycle counter.
+
+#zhangbo add for battery, start
+config ZTE_BATTERY_4350MV_1735MAH
+	bool "Battery 4350mV 1735mAH"
+config ZTE_BATTERY_4350MV_3200MAH
+	bool "Battery 4350mV 3200mAH"
+#zhangbo add for battery, end
+	  
+#ZTEBSP wangbing, for p864a10 driver, 20120820
+config PROJECT_P864A10
+	bool "PROJECT_P864A10"
+
+#ZTEBSP wangtao, for p864a20 driver, 20121030
+config PROJECT_P864A20
+        bool "PROJECT_P864A20"
+
+config PROJECT_P864H01
+	bool "PROJECT_P864H01"
+	
+#ZTEBSP shihuiqin, for p864g02 driver, 20121212
+config PROJECT_P864G02
+        bool "PROJECT_P864G02"
+	
+config PROJECT_EVB
+	bool "PROJECT_EVB"
+
+#ztebsp zhangjing add for at.	start
+config USB_AT
+        bool "usb_at_port"
+#ztebsp zhangjing add for at. end
 
 endif

@@ -319,6 +319,11 @@ config LEDS_PM8XXX
 	  To compile this driver as a module, choose M here: the module will
 	  be called leds-pmic8xxx.
 
+#/*[ECID:000000] ZTEBSP wangbing, for pm8921 led, 20120903 */
+config LEDS_PM8XXX_HW_BLINK
+	bool "LED hardware blink support for Qualcomm PMIC8XXX"
+	depends on LEDS_PM8XXX
+
 config LEDS_PCA9633
 	tristate "LED support for PCA9633 I2C chip"
 	depends on LEDS_CLASS

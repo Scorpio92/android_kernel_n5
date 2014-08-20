@@ -20,11 +20,6 @@ config ZTEMT_HARDWARE_ID
 	help
 	 ZTEMT Hardware ID
 	 
-config ZTEMT_CHARGE
-	bool "ZTEMT Charge Feature"
-	default y
-	help
-	  ZTEMT Charge Feature
 	  
 config ZTEMT_POWEROFF_CHARGE
 	bool "ZTEMT PowOff Charge Feature"

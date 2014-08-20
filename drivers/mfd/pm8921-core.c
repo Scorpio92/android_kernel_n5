@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -804,8 +804,6 @@ pm8921_add_subdevices(const struct pm8921_platform_data *pdata,
 	}
 
 	if (pdata->ccadc_pdata) {
-		pdata->ccadc_pdata->ccadc_cdata.batt_temp_channel
-						= CHANNEL_BATT_THERM;
 		ccadc_cell.platform_data = pdata->ccadc_pdata;
 		ccadc_cell.pdata_size =
 				sizeof(struct pm8xxx_ccadc_platform_data);
@@ -848,9 +846,6 @@ static const char * const pm8917_rev_names[] = {
 	[PM8XXX_REVISION_8917_1p0]	= "1.0",
 };
 
-#ifdef CONFIG_ZTEMT_POWEROFF_CHARGE
-u8 pm_poweron_reason = 0;
-#endif
 static int __devinit pm8921_probe(struct platform_device *pdev)
 {
 	const struct pm8921_platform_data *pdata = pdev->dev.platform_data;
@@ -923,10 +918,6 @@ static int __devinit pm8921_probe(struct platform_device *pdev)
 		goto err_read_rev;
 	}
 	val &= PM8XXX_RESTART_REASON_MASK;
-	#ifdef CONFIG_ZTEMT_POWEROFF_CHARGE
-	printk("__PMIC Restart Reason: %s\n", pm8xxx_restart_reason_str[val]);
-	pm_poweron_reason = val;
-	#endif
 	pr_info("PMIC Restart Reason: %s\n", pm8xxx_restart_reason_str[val]);
 	pmic->restart_reason = val;
 
