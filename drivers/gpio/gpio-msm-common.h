@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,7 +21,9 @@ void __msm_gpio_set_polarity(unsigned gpio, unsigned val);
 unsigned __msm_gpio_get_intr_status(unsigned gpio);
 void __msm_gpio_set_intr_status(unsigned gpio);
 unsigned __msm_gpio_get_intr_config(unsigned gpio);
+#ifdef CONFIG_ZTE_AVS_HP_INT_GPIO_CAN_NOT_WAKE_IN_SLEEP
 unsigned __msm_gpio_get_intr_cfg_enable(unsigned gpio);
+#endif
 void __msm_gpio_set_intr_cfg_enable(unsigned gpio, unsigned val);
 void __msm_gpio_set_intr_cfg_type(unsigned gpio, unsigned type);
 void __gpio_tlmm_config(unsigned config);

@@ -209,4 +209,20 @@ config SND_SOC_DUAL_AMIC
 	help
 	 To add support for dual analog mic.
 
+#ZTEBSP weiguohua, for p864a10 audio driver start,20120907		 
+config ZTE_AVS_COMMON_MODIFY
+         bool "ZTE_AVS_COMMON_MODIFY   for  zte modify  audio driver"
+		 default  y
+		 help  
+		   To add support for zte modify audio driver
+
+#ZTEBSP weiguohua, for p864a10 audio driver end,2012100907
+#ZTEBSP weiguohua, for hp gpio not wake in sleep mode start,20121105		 
+config ZTE_AVS_HP_INT_GPIO_CAN_NOT_WAKE_IN_SLEEP
+         bool "for hp gpio not wake in sleep mode"
+		 default  y
+		 help  
+		   To add support for hp gpio not wake in sleep mode
+#ZTEBSP weiguohua, for hp gpio not wake in sleep mode end,20121105
+
 endmenu
