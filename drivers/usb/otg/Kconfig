@@ -183,4 +183,11 @@ config USB_MV_OTG
 
 	  To compile this driver as a module, choose M here.
 
+#ztebsp zhangjing add for 8064 otg,20121010
+config USB_8064
+	bool "USB_8064"
+	default n	
+  help
+    zhangjing add for 8064 otg.
+
 endif # USB || OTG

@@ -332,6 +332,7 @@ struct msm_otg {
 	enum usb_chg_state chg_state;
 	enum usb_chg_type chg_type;
 	unsigned dcd_time;
+	u8 dcd_retries;
 	struct wake_lock wlock;
 	struct notifier_block usbdev_nb;
 	unsigned mA_port;
@@ -363,6 +364,9 @@ struct msm_otg {
 #define PHY_RETENTIONED			BIT(1)
 #define XO_SHUTDOWN			BIT(2)
 #define CLOCKS_DOWN			BIT(3)
+/*[ECID:000000] ZTEBSP zhangbo, Qualcom patch, Fix USB LPM for cable disconnect, start */
+#define CLOCKS_DOWN			BIT(3)
+/*[ECID:000000] ZTEBSP zhangbo, Qualcom patch, Fix USB LPM for cable disconnect, end */
 	int reset_counter;
 	unsigned long b_last_se0_sess;
 	unsigned long tmouts;
