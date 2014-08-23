@@ -85,6 +85,7 @@ obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35516) += mipi_truly_tft540960_1_e.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35590) += mipi_NT35590.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_SIMULATOR) += mipi_simulator.o
 obj-$(CONFIG_ZTEMT_LCD_V5) += mipi_zte_sharp.o mipi_zte_sharp_video_1080p.o v5_disp_incr.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_SHARP) += mipi_sharp.o
 
 ifeq ($(CONFIG_ZTEMT_LCD_CMD_MODE),y)
 obj-$(CONFIG_ZTEMT_LCD_Z5MINI)+= mipi_zte_z5mini_lcd.o  mipi_zte_sharp_cmd_720p_r69431.o mipi_zte_sharp_cmd_720p_nt35590.o mipi_zte_sharp_video_720p_r63415.o mipi_zte_tianma_video_720p_otm1282a.o v5_disp_incr.o

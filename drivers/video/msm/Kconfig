@@ -423,6 +423,11 @@ config FB_MSM_MIPI_SIMULATOR_VIDEO
 	select FB_MSM_MIPI_DSI_SIMULATOR
 	default n
 
+config FB_MSM_MIPI_DSI_SHARP
+        bool
+        select FB_MSM_MIPI_DSI
+        default y
+
 config FB_MSM_NO_MDP_PIPE_CTRL
 	depends on FB_MSM_OVERLAY
 	bool "Do not use mdp_pipe_ctrl"
@@ -1036,6 +1041,15 @@ config FB_MSM_EBI2_PANEL_DETECT
 	default n
 	---help---
 	  Support for EBI2 panel auto detect
+
+#//[ECID:0000]ZTE_BSP zhangqi 20120626 for lcd backlight CABC driver,start.
+config BACKLIGHT_CABC
+        bool "Backlight CABC func macro , compatible with TPS61165 driver"
+        default n
+	---help---
+       If you want have CABC func and compatible with TPS61165,
+        say Y to enable this driver.
+#//[ECID:0000]ZTE_BSP zhangqi 20120626 for lcd backlight CABC driver,end.	
 
 if FB_MSM_MDSS
 	source "drivers/video/msm/mdss/Kconfig"
