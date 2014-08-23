@@ -109,13 +109,13 @@ struct msm_camera_sensor_flash_current_driver {
 	const struct pmic8058_leds_platform_data *driver_channel;
 };
 
+/* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
 enum msm_camera_ext_led_flash_id {
 	MAM_CAMERA_EXT_LED_FLASH_SC628A,
 	MAM_CAMERA_EXT_LED_FLASH_TPS61310,
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
-	MAM_CAMERA_EXT_LED_FLASH_LM3642,
-#endif	
+	MAM_CAMERA_EXT_LED_FLASH_LM3642,	
 };
+/* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
 
 struct msm_camera_sensor_flash_external {
 	uint32_t led_en;

@@ -1,5 +1,5 @@
 
-/* Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,38 +11,145 @@
  * GNU General Public License for more details.
  *
  */
+#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/leds-pmic8058.h>
 #include <linux/pwm.h>
 #include <linux/pmic8058-pwm.h>
 #include <linux/hrtimer.h>
-#include <linux/export.h>
-#include <linux/timer.h>
-#include <linux/workqueue.h>
+#include <linux/i2c.h>
 #include <mach/pmic.h>
 #include <mach/camera.h>
 #include <mach/gpio.h>
-#include "msm_camera_i2c.h"
 
-struct flash_work {
-	struct work_struct my_work;
-	int    x;
-};
-struct flash_work *work;
-static struct timer_list flash_timer;
-static int timer_state;
-static struct workqueue_struct *flash_wq;
 struct i2c_client *sx150x_client;
 struct timer_list timer_flash;
 static struct msm_camera_sensor_info *sensor_data;
-static struct msm_camera_i2c_client i2c_client;
 enum msm_cam_flash_stat{
 	MSM_CAM_FLASH_OFF,
 	MSM_CAM_FLASH_ON,
 };
 
 static struct i2c_client *sc628a_client;
+
+static int32_t flash_i2c_txdata(struct i2c_client *client,
+		unsigned char *txdata, int length)
+{
+	/* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+	#ifdef CONFIG_FLASH_LM3642
+	struct i2c_msg msg[] = {
+		{
+			.addr = client->addr,
+			.flags = 0,
+			.len = length,
+			.buf = txdata,
+		},
+	};
+	#else
+	struct i2c_msg msg[] = {
+		{
+			.addr = client->addr >> 1,
+			.flags = 0,
+			.len = length,
+			.buf = txdata,
+		},
+	};
+	#endif
+	/* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
+	
+	if (i2c_transfer(client->adapter, msg, 1) < 0) {
+		CDBG("flash_i2c_txdata faild 0x%x\n", client->addr >> 1);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int32_t flash_i2c_write_b(struct i2c_client *client,
+	uint8_t baddr, uint8_t bdata)
+{
+	int32_t rc = -EFAULT;
+	unsigned char buf[2];
+	if (!client)
+		return  -ENOTSUPP;
+
+	memset(buf, 0, sizeof(buf));
+	buf[0] = baddr;
+	buf[1] = bdata;
+
+	rc = flash_i2c_txdata(client, buf, 2);
+	if (rc < 0) {
+		CDBG("i2c_write_b failed, addr = 0x%x, val = 0x%x!\n",
+				baddr, bdata);
+	}
+	usleep_range(4000, 5000);
+
+	return rc;
+}
+
+/* wangjianping 20121212 added for i2c read operation, start */
+static int flash_i2c_rxdata(struct i2c_client *client,
+	unsigned char *rxdata, int length)
+{
+	#ifdef CONFIG_FLASH_LM3642
+	struct i2c_msg msgs[] = {
+		{
+			.addr  = client->addr,
+			.flags = 0,
+			.len   = 1,
+			.buf   = rxdata,
+		},
+		{
+			.addr  = client->addr,
+			.flags = I2C_M_RD,
+			.len   = 1,
+			.buf   = rxdata,
+		},
+	};
+	#else
+	struct i2c_msg msgs[] = {
+		{
+			.addr  = client->addr >> 1,
+			.flags = 0,
+			.len   = 1,
+			.buf   = rxdata,
+		},
+		{
+			.addr  = client->addr >> 1,
+			.flags = I2C_M_RD,
+			.len   = 1,
+			.buf   = rxdata,
+		},
+	};
+	#endif
+	
+	if (i2c_transfer(client->adapter, msgs, 2) < 0) {
+		CDBG("flash_i2c_rxdata failed!\n");
+		return -EIO;
+	}
+	return 0;
+}
+
+static int32_t flash_i2c_read_b(struct i2c_client *client,
+    uint8_t raddr, uint8_t *rdata, int rlen)
+{
+	int32_t rc = 0;
+	unsigned char buf[1];
+	if (!rdata)
+		return -EIO;
+	memset(buf, 0, sizeof(buf));
+	buf[0] = raddr;
+	
+	rc = flash_i2c_rxdata(client, buf, rlen);
+	if (rc < 0) {
+		CDBG("%s 0x%x failed!\n", __func__, raddr);
+		return rc;
+	}
+	*rdata = buf[0];
+	return rc;
+}
+/* wangjianping 20121212 added for i2c read operation, start */
 
 static const struct i2c_device_id sc628a_i2c_id[] = {
 	{"sc628a", 0},
@@ -53,7 +160,7 @@ static int sc628a_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	int rc = 0;
-	CDBG("sc628a_probe called!\n");
+	pr_err("sc628a_probe called!\n");
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		pr_err("i2c_check_functionality failed\n");
@@ -62,7 +169,7 @@ static int sc628a_i2c_probe(struct i2c_client *client,
 
 	sc628a_client = client;
 
-	CDBG("sc628a_probe success rc = %d\n", rc);
+	pr_err("sc628a_probe success rc = %d\n", rc);
 	return 0;
 
 probe_failure:
@@ -98,10 +205,8 @@ static int tps61310_i2c_probe(struct i2c_client *client,
 	}
 
 	tps61310_client = client;
-	i2c_client.client = tps61310_client;
-	i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-	rc = msm_camera_i2c_write(&i2c_client, 0x01, 0x00,
-		MSM_CAMERA_I2C_BYTE_DATA);
+
+	rc = flash_i2c_write_b(tps61310_client, 0x01, 0x00);
 	if (rc < 0) {
 		tps61310_client = NULL;
 		goto probe_failure;
@@ -124,7 +229,8 @@ static struct i2c_driver tps61310_i2c_driver = {
 	},
 };
 
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
+
+/* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
 static struct i2c_client *lm3642_client;
 
 static const struct i2c_device_id lm3642_i2c_id[] = {
@@ -132,11 +238,48 @@ static const struct i2c_device_id lm3642_i2c_id[] = {
 	{ }
 };
 
+
+/*buffer content structure*/
+/*|byte0 | byte1 |   byte 2-5      | byte 6-9 | */
+/*=========================================*/
+/*|   0    |    x    | register addr  |     data    | */
+static ssize_t msm_flash_regs_set(struct device *dev, struct device_attribute *attr,
+						const char *buf, size_t count)
+{    
+    uint8_t   regs_addr;     
+    uint8_t   data;   
+    unsigned long int val;
+    int32_t  rc = 0;	 
+    
+    val = simple_strtoul(buf, NULL, 16);
+    
+    printk("wjp:%s %ld\n", __func__, val);
+    
+    regs_addr = val >> 16;
+    data = val;
+    
+    printk("wjp:lm3642_client->addr is 0x%x, %s\n", lm3642_client->addr, lm3642_client->name);
+    printk("wjp:regs_addr=0x%x data=0x%x\n", regs_addr, data);
+    
+    rc = flash_i2c_write_b(lm3642_client, regs_addr, data);
+        
+    printk("wjp rc:%d\n", rc);
+    if(rc<0)
+    {
+        printk("wjp:lm3642_client registers set FAIL!\n");
+    }
+    return count;
+}
+
+static DEVICE_ATTR(msm_flash_regs, S_IWUSR, NULL, msm_flash_regs_set);
+
 static int lm3642_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	int rc = 0;
-	CDBG("%s enter\n", __func__);
+    static int creat_sys_flag = 1;
+
+	pr_err("lm3642_probe called!\n");
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		pr_err("i2c_check_functionality failed\n");
@@ -145,23 +288,40 @@ static int lm3642_i2c_probe(struct i2c_client *client,
 
 	lm3642_client = client;
 
-	CDBG("%s success! rc = %d\n", __func__, rc);
+    if(creat_sys_flag){
+        int err;
+		creat_sys_flag = 0;
+        err = device_create_file(&client->dev, &dev_attr_msm_flash_regs);    //ŽŽœšÊôÐÔÎÄŒþ        
+    }
+	
+	pr_err("lm3642_probe success rc = %d\n", rc);
 	return 0;
 
 probe_failure:
-	pr_err("%s failed! rc = %d\n", __func__, rc);
+	pr_err("lm3642_probe failed! rc = %d\n", rc);
 	return rc;
 }
+
+//[ECID:000000] ZTEBSP wanghaifei 20121227 start, avoid power off leakage current
+static int lm3462_led_en;
+static void lm3462_i2c_shutdown(struct i2c_client * client)
+{
+	if (lm3462_led_en > 0)
+		gpio_direction_output(lm3462_led_en, 0);
+}
+//[ECID:000000] ZTEBSP wanghaifei 20121227 end, avoid power off leakage current
 
 static struct i2c_driver lm3642_i2c_driver = {
 	.id_table = lm3642_i2c_id,
 	.probe  = lm3642_i2c_probe,
 	.remove = __exit_p(lm3642_i2c_remove),
+	.shutdown = lm3462_i2c_shutdown, //[ECID:000000] ZTEBSP wanghaifei 20121227, avoid power off leakage current
 	.driver = {
 		.name = "lm3642",
 	},
 };
-#endif
+/* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
+
 
 static int config_flash_gpio_table(enum msm_cam_flash_stat stat,
 			struct msm_camera_sensor_strobe_flash_data *sfdata)
@@ -326,28 +486,13 @@ int msm_camera_flash_led(
 	return rc;
 }
 
-static void flash_wq_function(struct work_struct *work)
-{
-	if (tps61310_client) {
-		i2c_client.client = tps61310_client;
-		i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-		msm_camera_i2c_write(&i2c_client, 0x01,
-				0x46, MSM_CAMERA_I2C_BYTE_DATA);
-	}
-	return;
-}
-
-void flash_timer_callback(unsigned long data)
-{
-	queue_work(flash_wq, (struct work_struct *)work );
-	mod_timer(&flash_timer, jiffies + msecs_to_jiffies(10000));
-}
-
 int msm_camera_flash_external(
 	struct msm_camera_sensor_flash_external *external,
 	unsigned led_state)
 {
 	int rc = 0;
+
+	pr_err("%s,----------- flash_id is %d,led_state is %d \n", __func__, external->flash_id,led_state);
 
 	switch (led_state) {
 
@@ -371,20 +516,28 @@ int msm_camera_flash_external(
 					return rc;
 				}
 			}
-		} 
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
-		else if (external->flash_id ==
-			MAM_CAMERA_EXT_LED_FLASH_LM3642) {
-			if (!lm3642_client) {
-				rc = i2c_add_driver(&lm3642_i2c_driver);
-				if (rc < 0 || lm3642_client == NULL) {
-					pr_err("lm3642_i2c_driver add failed\n");
-					rc = -ENOTSUPP;
-					return rc;
-				}
-			}
-		} 		
-#endif
+		}
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+        else if (external->flash_id ==
+        			MAM_CAMERA_EXT_LED_FLASH_LM3642) {
+        			if (!lm3642_client) {
+						uint8_t flag_reg = 0;
+						pr_err("lm3642_i2c_driver add client \r\n");
+        				rc = i2c_add_driver(&lm3642_i2c_driver);
+        				if (rc < 0 || lm3642_client == NULL) {
+        					pr_err("lm3642_i2c_driver add failed, rc:%d \r\n", rc);
+        					rc = -ENOTSUPP;
+        					return rc;
+        				}
+					lm3462_led_en = external->led_en;//[ECID:000000] ZTEBSP wanghaifei 20121227, for shutdown
+                        /* read flag register */
+                        rc = flash_i2c_read_b(lm3642_client, 0x0B, &flag_reg, 1);
+                        if(rc < 0)
+                            pr_err("%s read flag register failed, rc = %d \n",__func__, rc);
+						printk("%s read flag register = %d \n",__func__, flag_reg);
+        			}
+        		}
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */		
 		else {
 			pr_err("Flash id not supported\n");
 			rc = -ENOTSUPP;
@@ -409,6 +562,12 @@ int msm_camera_flash_external(
 					i2c_del_driver(&tps61310_i2c_driver);
 					tps61310_client = NULL;
 				}
+                /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+                if (lm3642_client) {
+                    i2c_del_driver(&lm3642_i2c_driver);
+                    lm3642_client = NULL;
+                }
+                /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
 				return rc;
 			}
 			i2c_put_adapter(adapter);
@@ -418,10 +577,26 @@ int msm_camera_flash_external(
 			rc = gpio_request(external->led_en, "sc628a");
 		if (tps61310_client)
 			rc = gpio_request(external->led_en, "tps61310");
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
-		if (lm3642_client)
-			rc = gpio_request(external->led_en, "lm3642");
-#endif
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+        if (lm3642_client) {
+            rc = gpio_request(external->led_en, "lm3642");
+        }
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
+
+        // zte-modify, 20130206 fuyipeng modify for flash +++
+        if (rc) {
+            gpio_free(external->led_en);
+            
+            if (sc628a_client)
+                rc = gpio_request(external->led_en, "sc628a");
+            if (tps61310_client)
+                rc = gpio_request(external->led_en, "tps61310");
+            if (lm3642_client) {
+                rc = gpio_request(external->led_en, "lm3642");
+            }
+        }
+        // zte-modify, 20130206 fuyipeng modify for flash ---
+
 		if (!rc) {
 			gpio_direction_output(external->led_en, 0);
 		} else {
@@ -432,25 +607,27 @@ int msm_camera_flash_external(
 			rc = gpio_request(external->led_flash_en, "sc628a");
 		if (tps61310_client)
 			rc = gpio_request(external->led_flash_en, "tps61310");
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
-		if (lm3642_client)
-			rc = gpio_request(external->led_flash_en, "lm3642");
-#endif
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+        if (lm3642_client) {
+            rc = gpio_request(external->led_flash_en, "lm3642");
+        }
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
+
 		if (!rc) {
 			gpio_direction_output(external->led_flash_en, 0);
 			break;
 		}
 
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642		
-		if (sc628a_client || tps61310_client || lm3642_client) {
-#else
-		if (sc628a_client || tps61310_client) {
-#endif	
-			gpio_set_value_cansleep(external->led_en, 0);
-			gpio_free(external->led_en);
-		}
+		gpio_set_value_cansleep(external->led_en, 0);//zhangzhao
+		gpio_free(external->led_en);
+		pr_err("Flash INIT GPIO  ERROR---------\n");
+		
 error:
 		pr_err("%s gpio request failed\n", __func__);
+        // zte-modify, 20130206 fuyipeng modify for flash +++
+		gpio_free(external->led_en);
+        // zte-modify, 20130206 fuyipeng modify for flash ---
+        
 		if (sc628a_client) {
 			i2c_del_driver(&sc628a_i2c_driver);
 			sc628a_client = NULL;
@@ -459,20 +636,20 @@ error:
 			i2c_del_driver(&tps61310_i2c_driver);
 			tps61310_client = NULL;
 		}
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
-		if (lm3642_client) {
-			i2c_del_driver(&lm3642_i2c_driver);
-			lm3642_client = NULL;
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+        if (lm3642_client) {
+            i2c_del_driver(&lm3642_i2c_driver);
+            lm3642_client = NULL;        
 		}
-#endif
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
+		
 		break;
 
 	case MSM_CAMERA_LED_RELEASE:
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642		
-		if (sc628a_client || tps61310_client || lm3642_client) {
-#else
-		if (sc628a_client || tps61310_client) {
-#endif			
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+        if (sc628a_client || tps61310_client || lm3642_client)
+        {
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
 			gpio_set_value_cansleep(external->led_en, 0);
 			gpio_free(external->led_en);
 			gpio_set_value_cansleep(external->led_flash_en, 0);
@@ -482,20 +659,16 @@ error:
 				sc628a_client = NULL;
 			}
 			if (tps61310_client) {
-				if (timer_state) {
-					del_timer(&flash_timer);
-					kfree((void *)work);
-					timer_state = 0;
-				}
 				i2c_del_driver(&tps61310_i2c_driver);
 				tps61310_client = NULL;
 			}
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
-			if (lm3642_client) {
-				i2c_del_driver(&lm3642_i2c_driver);
-				lm3642_client = NULL;
-			}
-#endif			
+            /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+            if (lm3642_client) {
+                i2c_del_driver(&lm3642_i2c_driver);
+                lm3642_client = NULL;        
+    		}
+            /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
+			
 		}
 #if defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE)
 		if (external->expander_info && sx150x_client) {
@@ -506,113 +679,72 @@ error:
 		break;
 
 	case MSM_CAMERA_LED_OFF:
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642		
-		if (sc628a_client || tps61310_client || lm3642_client) {
-#else
-		if (sc628a_client || tps61310_client) {
-#endif			
-			if (sc628a_client) {
-				i2c_client.client = sc628a_client;
-				i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-				rc = msm_camera_i2c_write(&i2c_client, 0x02,
-					0x00, MSM_CAMERA_I2C_BYTE_DATA);
-			}
-			if (tps61310_client) {
-				i2c_client.client = tps61310_client;
-				i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-				rc = msm_camera_i2c_write(&i2c_client, 0x01,
-					0x00, MSM_CAMERA_I2C_BYTE_DATA);
-				if (timer_state) {
-					del_timer(&flash_timer);
-					kfree((void *)work);
-					timer_state = 0;
-				}
-			}
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
-			if (lm3642_client){
-				i2c_client.client = lm3642_client;
-				i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;	
-				rc = msm_camera_i2c_write(&i2c_client, 0x0a, 0x00,
-					MSM_CAMERA_I2C_BYTE_DATA);
-			}
-#endif
-			gpio_set_value_cansleep(external->led_en, 0);
-			gpio_set_value_cansleep(external->led_flash_en, 0);
-		}
+		pr_err("-----------000000000--------flash in standy mode\n");
+		usleep_range(2000, 3000);
+		if (sc628a_client)
+			//rc = flash_i2c_write_b(sc628a_client, 0x02, 0x00);
+			rc = flash_i2c_write_b(sc628a_client, 0x04, 0xa0);//ZHANGZHAO
+		if (tps61310_client)
+			rc = flash_i2c_write_b(tps61310_client, 0x01, 0x00);
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+        if (lm3642_client) {
+			rc = flash_i2c_write_b(lm3642_client, 0x0A, 0x00);       
+        }
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
+	
+		//gpio_set_value_cansleep(external->led_en, 0);
+		gpio_set_value_cansleep(external->led_en, 0);
+		gpio_set_value_cansleep(external->led_flash_en, 0);
 		break;
 
 	case MSM_CAMERA_LED_LOW:
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642		
-		if (sc628a_client || tps61310_client || lm3642_client) {
-#else
-		if (sc628a_client || tps61310_client) {
-#endif			
-			gpio_set_value_cansleep(external->led_en, 1);
-			gpio_set_value_cansleep(external->led_flash_en, 1);
-			usleep_range(2000, 3000);
-			if (sc628a_client) {
-				i2c_client.client = sc628a_client;
-				i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-				rc = msm_camera_i2c_write(&i2c_client, 0x02,
-					0x06, MSM_CAMERA_I2C_BYTE_DATA);
+		gpio_set_value_cansleep(external->led_en, 1);
+		usleep_range(2000, 3000);
+		if (sc628a_client)
+			{
+			//rc = flash_i2c_write_b(sc628a_client, 0x02, 0x06);
+			rc = flash_i2c_write_b(sc628a_client, 0x04, 0xaa);//ZHANGZHAO
 			}
-			if (tps61310_client) {
-				i2c_client.client = tps61310_client;
-				i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-				rc = msm_camera_i2c_write(&i2c_client, 0x01,
-					0x46, MSM_CAMERA_I2C_BYTE_DATA);
-				flash_wq = create_workqueue("my_queue");
-				work = (struct flash_work *)kmalloc(sizeof(struct flash_work), GFP_KERNEL);
-				INIT_WORK( (struct work_struct *)work, flash_wq_function );
-				setup_timer(&flash_timer, flash_timer_callback, 0);
-				mod_timer(&flash_timer, jiffies + msecs_to_jiffies(10000));
-				timer_state = 1;
-			}
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
-			if (lm3642_client){
-				i2c_client.client = lm3642_client;
-				i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-				rc = msm_camera_i2c_write(&i2c_client, 0x0a, 0x12,
-					MSM_CAMERA_I2C_BYTE_DATA);	
-				rc = msm_camera_i2c_write(&i2c_client, 0x09, 0x07,
-					MSM_CAMERA_I2C_BYTE_DATA);				
-			}
-#endif
-		}
+		if (tps61310_client)
+			rc = flash_i2c_write_b(tps61310_client, 0x01, 0x86);
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+        if (lm3642_client) {
+            gpio_set_value_cansleep(external->led_flash_en, 0);  /* set Flash pin low */
+			rc = flash_i2c_write_b(lm3642_client, 0x06, 0x00);   //0x30
+			/* Bit[7] RFU; Bits[6:4] Torch Current; Bits[3:0] Flash Current */
+			rc = flash_i2c_write_b(lm3642_client, 0x09, 0x00); // fuyipeng modify
+			rc = flash_i2c_write_b(lm3642_client, 0x0A, 0x12);  	/*0x1F*/	
+        }
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
+		
+		usleep_range(2000, 3000);
 		break;
 
 	case MSM_CAMERA_LED_HIGH:
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642		
-		if (sc628a_client || tps61310_client || lm3642_client) {
-#else
-		if (sc628a_client || tps61310_client) {
-#endif
-			gpio_set_value_cansleep(external->led_en, 1);
-			gpio_set_value_cansleep(external->led_flash_en, 1);
-			usleep_range(2000, 3000);
-			if (sc628a_client) {
-				i2c_client.client = sc628a_client;
-				i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-				rc = msm_camera_i2c_write(&i2c_client, 0x02,
-					0x49, MSM_CAMERA_I2C_BYTE_DATA);
+		gpio_set_value_cansleep(external->led_en, 1);
+		usleep_range(2000, 3000);
+		if (sc628a_client)
+			{
+			rc = flash_i2c_write_b(sc628a_client, 0x04, 0xab);
 			}
-			if (tps61310_client) {
-				i2c_client.client = tps61310_client;
-				i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-				rc = msm_camera_i2c_write(&i2c_client, 0x01,
-					0x8B, MSM_CAMERA_I2C_BYTE_DATA);
-			}
-#ifdef CONFIG_ZTEMT_CAMERA_FLASH_LM3642
-			if (lm3642_client){
-				i2c_client.client = lm3642_client;
-				i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-				rc = msm_camera_i2c_write(&i2c_client, 0x0a, 0x23,
-					MSM_CAMERA_I2C_BYTE_DATA);	
-				rc = msm_camera_i2c_write(&i2c_client, 0x09, 0x04,
-					MSM_CAMERA_I2C_BYTE_DATA);				
-			}
-#endif
-		}
+		if (tps61310_client)
+			rc = flash_i2c_write_b(tps61310_client, 0x01, 0x8B);
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, start */
+        if (lm3642_client) {
+            gpio_set_value_cansleep(external->led_en, 0);  /* set Tx pin low */
+            gpio_set_value_cansleep(external->led_flash_en, 1);			
+			msleep(400);
+			//printk("wjp MSM_CAMERA_LED_HIGH \n");			
+			rc = flash_i2c_write_b(lm3642_client, 0x08, 0x11); 
+			/* Bit[7] RFU; Bits[6:4] Torch Current; Bits[3:0] Flash Current */
+			rc = flash_i2c_write_b(lm3642_client, 0x09, 0x07); // fuyipeng modify   //0x49   
+			rc = flash_i2c_write_b(lm3642_client, 0x0A, 0x23);  /*0x1F*/
+        }
+        /* [ECID:000000] ZTEBSP wangjianping, 20121031 added for camera flash LM3462, end */
+		
+		usleep_range(2000, 3000);
+		//gpio_set_value_cansleep(external->led_en, 1);
+		//gpio_set_value_cansleep(external->led_flash_en, 1);
 		break;
 
 	default:
@@ -717,6 +849,8 @@ int32_t msm_camera_flash_set_led_state(
 	struct msm_camera_sensor_flash_data *fdata, unsigned led_state)
 {
 	int32_t rc;
+
+	//pr_err("%s, --------------- %d\n", __func__, fdata->flash_src->flash_sr_type);
 
 	if (fdata->flash_type != MSM_CAMERA_FLASH_LED ||
 		fdata->flash_src == NULL)
@@ -916,6 +1050,7 @@ int msm_flash_ctrl(struct msm_camera_sensor_info *sdata,
 {
 	int rc = 0;
 	sensor_data = sdata;
+	pr_err("%s, -------------flash mode %d\n", __func__, flash_info->flashtype);
 	switch (flash_info->flashtype) {
 	case LED_FLASH:
 		rc = msm_camera_flash_set_led_state(sdata->flash_data,

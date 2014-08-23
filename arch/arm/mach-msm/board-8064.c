@@ -140,6 +140,40 @@
 #define PCIE_PWR_EN_PMIC_GPIO 13
 #define PCIE_RST_N_PMIC_MPP 1
 
+/*ZTEBSP wangbing, for modelno driver, 20121015 +++*/
+#define MODELNO_LEN 10
+static char modelno[MODELNO_LEN] = "unknown";
+static int __init modelno_kernel_setup(char *p)
+{
+	strlcpy(modelno, p, MODELNO_LEN);
+	printk("%s modelno %s\n", __func__, modelno);
+	return 0;
+}
+char *get_modelno(void)
+{
+	return (char*)modelno;
+}
+EXPORT_SYMBOL(get_modelno);
+early_param("androidboot.modelno", modelno_kernel_setup);
+/*ZTEBSP wangbing, for modelno driver, 20121015 ---*/
+
+/*ZTEBSP wangbing, for modelno driver, 20121226 +++*/
+#define MODE_LEN 10
+static char bootmode[MODE_LEN] = "unknown";
+static int __init bootmode_kernel_setup(char *p)
+{
+	strlcpy(bootmode, p, MODE_LEN);
+	printk("%s bootmode %s\n", __func__, bootmode);
+	return 0;
+}
+char *get_bootmode(void)
+{
+	return (char*)bootmode;
+}
+EXPORT_SYMBOL(get_bootmode);
+early_param("androidboot.mode", bootmode_kernel_setup);
+/*ZTEBSP wangbing, for modelno driver, 20121226 ---*/
+
 #ifdef CONFIG_KERNEL_MSM_CONTIG_MEM_REGION
 static unsigned msm_contig_mem_size = MSM_CONTIG_MEM_SIZE;
 static int __init msm_contig_mem_size_setup(char *p)

@@ -458,3 +458,10 @@ config OV7692
 	depends on MSM_CAMERA
 	---help---
 	  Omni Vision VGA YUV Sensor
+
+#wangjianping 20121031 added camera flash LM3642
+config FLASH_LM3642
+	bool "CAMERA FLASH_LM3642"
+	depends on MSM_CAMERA
+	---help---
+	  Cemara Flash LM3462
