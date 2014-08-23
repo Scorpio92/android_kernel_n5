@@ -162,6 +162,10 @@ obj-$(CONFIG_FB_MSM_MIPI_NT35590_VIDEO_720P_PT) += mipi_NT35590_video_720p_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_SIMULATOR_VIDEO) += mipi_simulator_video.o
 obj-$(CONFIG_FB_MSM_MIPI_CHIMEI_WXGA) += mipi_chimei_wxga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_CHIMEI_WUXGA) += mipi_chimei_wuxga.o
+obj-$(CONFIG_FB_MSM_MIPI_ORISE_LEAD_VIDEO_720P_PT) += mipi_orise_lead_video_720p_pt.o
+obj-$(CONFIG_FB_MSM_MIPI_ORISE_BOE_VIDEO_720P_PT) += mipi_orise_boe_video_720p_pt.o
+obj-$(CONFIG_FB_MSM_MIPI_ORISE_CPT_VIDEO_720P_PT) += mipi_orise_cpt_video_720p_pt.o
+obj-$(CONFIG_FB_MSM_MIPI_SHARP_VIDEO_1080P_PT) += mipi_sharp_video_1080p_pt.o
 endif
 
 obj-$(CONFIG_FB_MSM_LCDC_PANEL) += lcdc_panel.o
