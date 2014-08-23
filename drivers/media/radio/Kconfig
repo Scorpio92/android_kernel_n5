@@ -466,4 +466,16 @@ config RADIO_IRIS_TRANSPORT
           To compile this driver as a module, choose M here: the
           module will be called radio-iris-transport.
 
+#/*[ECID:000000] ZTEBSP jiaobaocun, for FM external LNA, 20120903 */
+config RADIO_EXT_LNA
+        tristate "Qualcomm IRIS FM external LNA support"
+        depends on VIDEO_V4L2
+        default n
+        ---help---
+          Say Y here if you want to use the Qualcomm FM chip EXT LNA(IRIS).
+          This FM chip uses SMD interface
+
+          To compile this driver as a module, choose M here: the
+          module will be called radio-iris.
+
 endif # RADIO_ADAPTERS
