@@ -428,6 +428,11 @@ config FB_MSM_MIPI_DSI_SHARP
         select FB_MSM_MIPI_DSI
         default y
 
+config FB_MSM_MIPI_DSI_ORISE_BOE
+        bool
+        select FB_MSM_MIPI_DSI
+        default y
+
 config FB_MSM_NO_MDP_PIPE_CTRL
 	depends on FB_MSM_OVERLAY
 	bool "Do not use mdp_pipe_ctrl"
