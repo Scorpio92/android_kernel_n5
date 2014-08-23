@@ -209,6 +209,8 @@ struct msm_sensor_ctrl_t {
 	enum msm_sensor_cam_mode_t cam_mode;
 
 	struct mutex *msm_sensor_mutex;
+	struct msm_camera_csi2_params *curr_csi_params;
+	struct msm_camera_csi2_params **csi_params;
 
 	struct v4l2_subdev sensor_v4l2_subdev;
 	struct v4l2_subdev_info *sensor_v4l2_subdev_info;

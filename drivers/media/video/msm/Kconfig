@@ -72,6 +72,12 @@ config MT9M114
         depends on MSM_CAMERA
         ---help---
         APTINA 1.26 MP yuv Sensor
+config OV9740
+	bool "Sensor OV9740 (VGA YUV)"
+	depends on MSM_CAMERA
+	default y
+	---help---
+	  Omni Vision VGA YUV Sensor.
 config WEBCAM_OV7692
 	bool "Sensor OV7692 (VGA YUV)"
 	depends on MSM_CAMERA && ARCH_MSM8X60 && !MSM_CAMERA_V4L2
