@@ -225,6 +225,17 @@ struct msm_fb_backup_type {
 	struct mdp_display_commit disp_commit;
 };
 
+//[ECID:0000] ZTEBSP shihuiqin start 20121011 for lcd_id info
+typedef enum {
+	LCD_PANEL_NOPANEL,
+       OTM1283_BOE_HD_LCM,
+       OTM1283_LEAD_HD_LCM,
+       OTM1283_CPT_HD_LCM,
+       E63311_SHARP_FHD_LCM,//P864A20
+	LCD_PANEL_MAX
+} LCD_PANEL_ID;
+//[ECID:0000] ZTEBSP shihuiqin start 20121011 for lcd_id info
+
 struct dentry *msm_fb_get_debugfs_root(void);
 void msm_fb_debugfs_file_create(struct dentry *root, const char *name,
 				u32 *var);

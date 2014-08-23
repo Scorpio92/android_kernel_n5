@@ -53,6 +53,18 @@
 #include "mdp.h"
 #include "mdp4.h"
 
+//[ECID:0000] ZTEBSP shihuiqin start 20121011 for lcd_id info
+#include <linux/proc_fs.h>
+static struct proc_dir_entry * d_entry;
+static int lcd_debug;
+static char  module_name[50]={"0"};
+void init_lcd_proc(void);
+void deinit_lcd_proc(void);
+static int msm_lcd_read_proc(char *page, char **start, off_t off, int count, int *eof, void *data);
+static int msm_lcd_write_proc(struct file *file, const char __user *buffer,unsigned long count, void *data);
+extern int lcd_enum;
+//[ECID:0000] ZTEBSP shihuiqin end 20121011 for lcd_id info
+
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MSM_FB_NUM	3
 #endif
@@ -391,6 +403,7 @@ static int msm_fb_probe(struct platform_device *pdev)
 	struct msm_fb_data_type *mfd;
 	int rc;
 	int err = 0;
+	static uint8 lcd_id_init=0;
 
 	MSM_FB_DEBUG("msm_fb_probe\n");
 
@@ -452,6 +465,14 @@ static int msm_fb_probe(struct platform_device *pdev)
 #endif
 
 	bf_supported = mdp4_overlay_borderfill_supported();
+
+       //[ECID:0000] ZTEBSP wangminrong start 20120518 for lcd hardware info
+//ZTEBSP wangbing, delete the second init lcd_id, 20130126
+	if (!lcd_id_init) {
+	       init_lcd_proc();
+		lcd_id_init = 1;
+	}
+       //[ECID:0000] ZTEBSP wangminrong end 20120518 for lcd hardware info
 
 	rc = msm_fb_register(mfd);
 	if (rc)
@@ -608,16 +629,19 @@ static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 	mfd->suspend.sw_refreshing_enable = mfd->sw_refreshing_enable;
 	mfd->suspend.op_enable = mfd->op_enable;
 
-	/*
-	 * For HDMI/DTV, panel needs not to be turned ON during resume
-	 * as power_ctrl will turn ON the HPD at resume which will turn
-	 * ON the panel in case the HDMI cable is still connected.
-	 */
-	if (mfd->panel_info.type == HDMI_PANEL ||
-	    mfd->panel_info.type == DTV_PANEL)
-		mfd->suspend.panel_power_on = false;
-	else
-		mfd->suspend.panel_power_on = mfd->panel_power_on;
+/*[ECID:000000] ZTEBSP wanghaifei start 20130221, add qcom new patch for HDP resume wait*/
+
+       /*
+        * For HDMI/DTV, panel needs not to be turned ON during resume
+        * as power_ctrl will turn ON the HPD at resume which will turn
+        * ON the panel in case the HDMI cable is still connected.
+        */
+       if (mfd->panel_info.type == HDMI_PANEL ||
+           mfd->panel_info.type == DTV_PANEL)
+               mfd->suspend.panel_power_on = false;
+       else
+               mfd->suspend.panel_power_on = mfd->panel_power_on;
+/*[ECID:000000] ZTEBSP wanghaifei end 20130221, add qcom new patch for HDP resume wait*/
 
 	mfd->suspend.op_suspend = true;
 
@@ -960,8 +984,13 @@ void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl)
 {
 	struct msm_fb_panel_data *pdata;
 	__u32 temp = bkl_lvl;
-
-	unset_bl_level = bkl_lvl;
+	if (!mfd->panel_power_on || !bl_updated) {
+		if (bkl_lvl != 0) /*[ECID:000000] ZTEBSP wanghaifei 20121224, avoid set to 0 when resume system*/
+			unset_bl_level = bkl_lvl;
+		return;
+	} else {
+		unset_bl_level = 0;
+	}
 
 	if (!mfd->panel_power_on || !bl_updated)
 		return;
@@ -4225,6 +4254,81 @@ static int msm_fb_register_driver(void)
 {
 	return platform_driver_register(&msm_fb_driver);
 }
+
+//[ECID:0000] ZTEBSP shihuiqin start 20121011 for lcd_id info
+static int msm_lcd_read_proc(
+        char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+    printk("[ZGC]:msm_lcd_read_proc\n");
+	switch(lcd_enum)
+	{
+		case OTM1283_BOE_HD_LCM:
+			strcpy(module_name,"BOE(OTM1283+BOE)_720*1280_5.7Inch");
+			break;
+		case OTM1283_CPT_HD_LCM:
+			strcpy(module_name,"YASSY(OTM1283+CPT)_720*1280_5.7Inch");
+			break;			
+		case OTM1283_LEAD_HD_LCM:
+			strcpy(module_name,"LEAD/YUSHUN/TRULY(OTM1283+AUO)_720*1280_5.7Inch");
+			break;
+	       case LCD_PANEL_MAX:
+		case LCD_PANEL_NOPANEL:
+			break;
+		default:
+			strcpy(module_name,"0");
+		break;
+	}
+	len = sprintf(page, "%s\n",module_name);
+	return len;
+
+}
+
+static int msm_lcd_write_proc(struct file *file, const char __user *buffer,
+			     unsigned long count, void *data)
+{
+	char tmp[16] = {0};
+	int len = 0;
+	len = count;
+	
+    
+	if (count > sizeof(tmp)) {
+		len = sizeof(tmp) - 1;
+	}
+	if(copy_from_user(tmp, buffer, len))
+                return -EFAULT;
+	if (strstr(tmp, "on")) {
+		lcd_debug = 1;
+	} else if (strstr(tmp, "off")) {
+		lcd_debug = 0;
+	}
+	return count;
+
+}
+
+void  init_lcd_proc(void)
+{
+       printk("[ZGC]:init_lcd_proc\n");
+	d_entry = create_proc_entry("driver/lcd_id",
+				    0, NULL);
+        if (d_entry) {
+                d_entry->read_proc = msm_lcd_read_proc;
+                d_entry->write_proc = msm_lcd_write_proc;
+                d_entry->data = NULL;
+        }
+
+}
+
+void deinit_lcd_proc(void)
+{
+        printk("[ZGC]:deinit_lcd_proc\n");
+	if (NULL != d_entry) {
+		remove_proc_entry("driver/lcd_id", NULL);
+		d_entry = NULL;
+	}
+}
+//[ECID:0000] ZTEBSP shihuiqin end 20121011 for lcd_id info
+
 
 #ifdef CONFIG_FB_MSM_WRITEBACK_MSM_PANEL
 struct fb_info *msm_fb_get_writeback_fb(void)
