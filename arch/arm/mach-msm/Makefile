@@ -275,10 +275,12 @@ obj-$(CONFIG_ARCH_APQ8064) += acpuclock-8064.o
 board-8960-all-objs += board-8960.o board-8960-camera.o board-8960-display.o board-8960-pmic.o board-8960-storage.o board-8960-gpiomux.o
 board-8930-all-objs += board-8930.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-8930-gpiomux.o devices-8930.o board-8930-gpu.o
 #/* ZTEMT Added by LiuYongfeng, 2012/10/5 */
-#board-8064-all-objs += board-8064.o board-8064-pmic.o board-8064-storage.o board-8064-gpiomux.o board-8064-camera.o board-8064-display.o board-8064-gpu.o
-board-8064-all-part1-objs += board-8064-pmic.o board-8064-storage.o board-8064-gpiomux.o board-8064-gpu.o board-8064-regulator.o
-board-8064-all-part2-objs += board-8064.o board-8064-camera.o board-8064-display.o
+board-8064-all-objs += board-8064.o board-8064-pmic.o board-8064-storage.o board-8064-gpiomux.o board-8064-camera.o board-8064-display.o board-8064-gpu.o
+#board-8064-all-part1-objs += board-8064-pmic.o board-8064-storage.o board-8064-gpiomux.o board-8064-gpu.o board-8064-regulator.o
+#board-8064-all-part2-objs += board-8064.o board-8064-camera.o board-8064-display.o
 #/* ZTEMT END */
+obj-$(CONFIG_MACH_MSM8960_SIM) += board-8960-all.o board-8960-regulator.o
+obj-$(CONFIG_MACH_MSM8960_RUMI3) += board-8960-all.o board-8960-regulator.o
 obj-$(CONFIG_MACH_MSM8960_CDP) += board-8960-all.o board-8960-regulator.o
 obj-$(CONFIG_MACH_MSM8960_MTP) += board-8960-all.o board-8960-regulator.o
 obj-$(CONFIG_MACH_MSM8960_FLUID) += board-8960-all.o board-8960-regulator.o
@@ -292,16 +294,13 @@ obj-$(CONFIG_PM8921_BMS) += bms-batterydata.o bms-batterydata-desay.o bms-batter
 obj-$(CONFIG_ZTEMT_CHARGE) += bms_ztemt_batterydata_2300mAh.o
 obj-$(CONFIG_ZTEMT_BATTERY_2000MAH) += bms_ztemt_batterydata_2000mAh.o
 #ZTEMT END
-#/* ZTEMT Added by LiuYongfeng, 2012/10/5 */
-#obj-$(CONFIG_MACH_APQ8064_CDP) += board-8064-all.o board-8064-regulator.o
-#obj-$(CONFIG_MACH_APQ8064_MTP) += board-8064-all.o board-8064-regulator.o
-obj-$(CONFIG_MACH_APQ8064_MTP) += board-8064-all-part1.o
-obj-$(CONFIG_MACH_APQ8064_MTP) += board/
-obj-$(CONFIG_MACH_APQ8064_MTP_ORIG) += board-8064-all-part2.o 
-#obj-$(CONFIG_MACH_APQ8064_LIQUID) += board-8064-all.o board-8064-regulator.o
-#obj-$(CONFIG_MACH_MPQ8064_HRD) += board-8064-all.o board-8064-regulator.o
-#obj-$(CONFIG_MACH_MPQ8064_DTV) += board-8064-all.o board-8064-regulator.o
-#/* ZTEMT END */
+obj-$(CONFIG_MACH_APQ8064_SIM) += board-8064-all.o board-8064-regulator.o
+obj-$(CONFIG_MACH_APQ8064_RUMI3) += board-8064-all.o board-8064-regulator.o
+obj-$(CONFIG_MACH_APQ8064_CDP) += board-8064-all.o board-8064-regulator.o
+obj-$(CONFIG_MACH_APQ8064_MTP) += board-8064-all.o board-8064-regulator.o
+obj-$(CONFIG_MACH_APQ8064_LIQUID) += board-8064-all.o board-8064-regulator.o
+obj-$(CONFIG_MACH_MPQ8064_HRD) += board-8064-all.o board-8064-regulator.o
+obj-$(CONFIG_MACH_MPQ8064_DTV) += board-8064-all.o board-8064-regulator.o
 obj-$(CONFIG_ARCH_MSM9615) += board-9615.o devices-9615.o board-9615-regulator.o board-9615-gpiomux.o board-9615-storage.o board-9615-display.o
 obj-$(CONFIG_ARCH_MSM9615) += clock-local.o clock-9615.o acpuclock-9615.o clock-rpm.o clock-pll.o
 obj-$(CONFIG_ARCH_MSM8974) += board-8974.o board-dt.o board-8974-gpiomux.o
