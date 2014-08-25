@@ -89,3 +89,6 @@ obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE) 	+= synaptics_fw_update.o
 obj-$(CONFIG_ZTEMT_TOUCHSCREEN_SYNAPTICS_DSX) += synaptics_dsx/
 obj-$(CONFIG_ZTE_TOUCHSCREEN)	+= zte_touch/
 obj-$(CONFIG_CYPRSS_TOUCHSCREEN_TMA463)	+= cypress/
+ifeq ($(CONFIG_PROJECT_P864H01),y)
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_2202)	+= synaptics_i2c_rmi_2202.o
+endif

@@ -140,6 +140,18 @@
 #define PCIE_PWR_EN_PMIC_GPIO 13
 #define PCIE_RST_N_PMIC_MPP 1
 
+/*[ECID:000000] ZTEBSP zhangzhao start  20120321, 8x25 bring up  */
+//#ifdef CONFIG_TOUCHSCREEN_VIRTUAL_KEYS
+struct kobject *android_touch_kobj;
+static void touch_sysfs_init(void)
+{
+	android_touch_kobj = kobject_create_and_add("board_properties", NULL);
+	if (android_touch_kobj == NULL) {
+		printk(KERN_ERR "%s: subsystem_register failed\n", __func__);
+	}
+}
+//#endif
+
 /*ZTEBSP wangbing, for modelno driver, 20121015 +++*/
 #define MODELNO_LEN 10
 static char modelno[MODELNO_LEN] = "unknown";
@@ -3201,6 +3213,11 @@ static void __init register_i2c_devices(void)
 		mach_mask = I2C_MPQ_CDP;
 	else
 		pr_err("unmatched machine ID in register_i2c_devices\n");
+
+	/*[ECID:000000] ZTEBSP zhangzhao start  20120321, 8x25 bring up  */
+	//#ifdef CONFIG_TOUCHSCREEN_VIRTUAL_KEYS
+	touch_sysfs_init();
+       //#endif
 
 	/* Run the array and install devices as appropriate */
 	for (i = 0; i < ARRAY_SIZE(apq8064_i2c_devices); ++i) {
