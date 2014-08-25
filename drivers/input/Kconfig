@@ -139,6 +139,11 @@ config INPUT_EVDEV
 	  To compile this driver as a module, choose M here: the
 	  module will be called evdev.
 
+ config INPUT_SENSOR
+	tristate "sensor sensor"
+	help
+	  sensor sensor
+
 config INPUT_EVBUG
 	tristate "Event debugging"
 	help
@@ -192,6 +197,8 @@ source "drivers/input/tablet/Kconfig"
 source "drivers/input/touchscreen/Kconfig"
 
 source "drivers/input/misc/Kconfig"
+
+source "drivers/input/ti-sensor/Kconfig"
 
 endif
 

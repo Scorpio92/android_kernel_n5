@@ -32,7 +32,6 @@ Version History.
 
 #ifndef	__LSM330DLC_H__
 #define	__LSM330DLC_H__
-#include <linux/module.h>
 
 #define SAD0L				0x00
 #define SAD0H				0x01
@@ -81,14 +80,6 @@ Version History.
 #define LSM330DLC_GYR_DISABLED	0
 
 #ifdef	__KERNEL__
-
-#define GPIO_G_SENSOR_INT1 22
-#define GPIO_G_SENSOR_INT2 23
-
-#define GPIO_GYRO_INT      28
-
-//power for i2c and sensor end
-
 struct lsm330dlc_acc_platform_data {
 	unsigned int poll_interval;
 	unsigned int min_interval;
@@ -103,12 +94,10 @@ struct lsm330dlc_acc_platform_data {
 	u8 negate_y;
 	u8 negate_z;
 
-	int (*init)(struct i2c_client *client);
+	int (*init)(void);
 	void (*exit)(void);
 	int (*power_on)(void);
 	int (*power_off)(void);
-    int (*gpio_init)(void);
-    int (*gpio_exit)(void);	
 
 	/* set gpio_int[1,2] either to the choosen gpio pin number or to -EINVAL
 	 * if leaved unconnected
@@ -122,8 +111,6 @@ struct lsm330dlc_gyr_platform_data {
 	void (*exit)(void);
 	int (*power_on)(void);
 	int (*power_off)(void);
-    int (*gpio_init)(void);
-    int (*gpio_exit)(void);	
 
 	unsigned int poll_interval;
 	unsigned int min_interval;
