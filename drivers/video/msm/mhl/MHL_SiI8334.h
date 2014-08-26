@@ -7,6 +7,10 @@
 /***********************************************************************************/
 #ifndef __MHL_SII8334_H__
 #define __MHL_SII8334_H__
+
+//wangbing, for mhl debug
+//#define DEBUG
+
 #include <linux/types.h>
 #include <linux/kernel.h>
 
@@ -60,7 +64,7 @@ typedef _Bool bool_t;
 #define CONF__TX_DEBUG_PRINT   (ENABLE)
 
 #if (CONF__TX_DEBUG_PRINT == ENABLE)
-    #define TX_DEBUG_PRINT(x)	printk x
+    #define TX_DEBUG_PRINT(x)	pr_debug x
 #else
     #define TX_DEBUG_PRINT(x)
 #endif
@@ -68,15 +72,15 @@ typedef _Bool bool_t;
 #define CONF__CBUS_DEBUG_PRINT   (ENABLE)
 
 #if (CONF__CBUS_DEBUG_PRINT == ENABLE)
-    #define CBUS_DEBUG_PRINT(x)	printk x
+    #define CBUS_DEBUG_PRINT(x)	pr_debug x
 #else
     #define CBUS_DEBUG_PRINT(x)
 #endif
 
 
-#define CONF__TX_I2C_DEBUG_PRINT   (DISABLE)
+#define CONF__TX_I2C_DEBUG_PRINT   (ENABLE)
 #if (CONF__TX_I2C_DEBUG_PRINT == ENABLE)
-    #define TX_I2C_DEBUG_PRINT(x)	printk x
+    #define TX_I2C_DEBUG_PRINT(x)	pr_debug x
 #else
     #define TX_I2C_DEBUG_PRINT(x)
 #endif

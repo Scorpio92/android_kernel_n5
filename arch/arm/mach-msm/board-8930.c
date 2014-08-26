@@ -2109,11 +2109,14 @@ static struct i2c_board_info rmi4_i2c_devices[] = {
 #define MHL_POWER_GPIO_PM8038	PM8038_GPIO_PM_TO_SYS(MHL_GPIO_PWR_EN)
 #define MHL_POWER_GPIO_PM8917	PM8917_GPIO_PM_TO_SYS(25)
 static struct msm_mhl_platform_data mhl_platform_data = {
+/*[ECID:000000] ZTEBSP wangbing, for mhl compilation, 20120905 */
+#if 0
 	.irq = MSM_GPIO_TO_INT(MHL_GPIO_INT),
 	.gpio_mhl_int = MHL_GPIO_INT,
 	.gpio_mhl_reset = MHL_GPIO_RESET,
-	.gpio_mhl_power = MHL_POWER_GPIO_PM8038,
+	.gpio_mhl_power = MHL_POWER_GPIO,
 	.gpio_hdmi_mhl_mux = HDMI_MHL_MUX_GPIO,
+#endif	
 };
 
 static struct i2c_board_info sii_device_info[] __initdata = {

@@ -2446,11 +2446,14 @@ static struct i2c_board_info mxt_device_info[] __initdata = {
 };
 
 static struct msm_mhl_platform_data mhl_platform_data = {
+/*[ECID:000000] ZTEBSP wangbing, for mhl compilation, 20120905 */
+#if 0
 	.irq = MSM_GPIO_TO_INT(4),
 	.gpio_mhl_int = MHL_GPIO_INT,
 	.gpio_mhl_reset = MHL_GPIO_RESET,
 	.gpio_mhl_power = 0,
 	.gpio_hdmi_mhl_mux = 0,
+#endif	
 };
 
 static struct i2c_board_info sii_device_info[] __initdata = {
@@ -3287,8 +3290,11 @@ static void __init register_i2c_devices(void)
 						msm8960_i2c_devices[i].len);
 	}
 
+/*[ECID:000000] ZTEBSP wangbing, for mhl driver, 20120905 */
+#if 0
 	if (!mhl_platform_data.gpio_mhl_power)
 		pr_debug("mhl device configured for ext debug board\n");
+#endif	
 
 #ifdef CONFIG_MSM_CAMERA
 	if (msm8960_camera_i2c_devices.machs & mach_mask)
