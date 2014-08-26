@@ -5235,7 +5235,7 @@ static struct measure_clk measure_clk = {
 static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("xo",		cxo_a_clk.c,	""),
 	CLK_LOOKUP("xo",		pxo_a_clk.c,	""),
-	CLK_LOOKUP("pwm_clk",		cxo_clk.c,	"0-0048"),
+	CLK_LOOKUP("pwm_clk",		cxo_clk.c,	"5-0048"),      //doumingming add
 	CLK_LOOKUP("cxo",		cxo_clk.c,	"wcnss_wlan.0"),
 	CLK_LOOKUP("cxo",		cxo_clk.c,	"pil_riva"),
 	CLK_LOOKUP("xo",		pxo_clk.c,	"pil_qdsp6v4.0"),
@@ -5298,32 +5298,20 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("core_clk",		gp0_clk.c,		""),
 	CLK_LOOKUP("core_clk",		gp1_clk.c,		""),
 	CLK_LOOKUP("core_clk",		gp2_clk.c,		""),
-#ifdef CONFIG_MACH_LGE
-	CLK_LOOKUP("core_clk",		gsbi1_uart_clk.c,	""),
-#else
 	CLK_LOOKUP("core_clk",		gsbi1_uart_clk.c, "msm_serial_hsl.1"),
-#endif
 	CLK_LOOKUP("core_clk",		gsbi2_uart_clk.c,	""),
-	CLK_LOOKUP("core_clk",		gsbi3_uart_clk.c,	""),
-#ifdef CONFIG_MACH_LGE
-	CLK_LOOKUP("core_clk",		gsbi4_uart_clk.c,	"msm_serial_hsl.0"),
-#else
-	CLK_LOOKUP("core_clk",		gsbi4_uart_clk.c, "msm_serial_hs.1"),
-#endif
+//wangtao fusion3-debug begin	
+	CLK_LOOKUP("core_clk",		gsbi3_uart_clk.c,	"msm_serial_hsl.0"),
+//wangtao fusion3-debug end
+	CLK_LOOKUP("core_clk",		gsbi4_uart_clk.c,	""),
 	CLK_LOOKUP("core_clk",		gsbi5_uart_clk.c,	""),
-	CLK_LOOKUP("core_clk",		gsbi6_uart_clk.c, "msm_serial_hs.0"),
-#ifdef CONFIG_MACH_LGE
-	CLK_LOOKUP("core_clk",		gsbi7_uart_clk.c,	""),
-#else
-	CLK_LOOKUP("core_clk",		gsbi7_uart_clk.c, "msm_serial_hsl.0"),
-#endif
+	CLK_LOOKUP("core_clk",		gsbi6_uart_clk.c,	""),
+//wangtao fusion3-debug begin	
+	CLK_LOOKUP("core_clk",		gsbi7_uart_clk.c, ""),
+//wangtao fusion3-debug end	
 	CLK_LOOKUP("core_clk",		gsbi1_qup_clk.c,	"qup_i2c.0"),
-    //# modify the gsbi2 as the i2c for sensor
-    #ifdef CONFIG_ZTEMT_SENSORS
-	CLK_LOOKUP("core_clk",		gsbi2_qup_clk.c,	"qup_i2c.2"),
-    #else
-	CLK_LOOKUP("core_clk",		gsbi2_qup_clk.c,	""),
-    #endif
+//ZTEBSP fanjiankang
+	CLK_LOOKUP("core_clk",		gsbi2_qup_clk.c,	"qup_i2c.2"),         //added by fanjiankang
 	CLK_LOOKUP("core_clk",		gsbi3_qup_clk.c,	"qup_i2c.3"),
 	CLK_LOOKUP("core_clk",		gsbi4_qup_clk.c,	"qup_i2c.4"),
 	CLK_LOOKUP("core_clk",		gsbi5_qup_clk.c,	"spi_qsd.0"),
@@ -5363,32 +5351,21 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("ce3_core_src_clk",	ce3_src_clk.c,		"qce.0"),
 	CLK_LOOKUP("ce3_core_src_clk",	ce3_src_clk.c,		"qcrypto.0"),
 	CLK_LOOKUP("dma_bam_pclk",	dma_bam_p_clk.c,	NULL),
-#ifdef CONFIG_MACH_LGE
-	CLK_LOOKUP("iface_clk",		gsbi1_p_clk.c,		""),
-#else
 	CLK_LOOKUP("iface_clk",		gsbi1_p_clk.c,	"msm_serial_hsl.1"),
-#endif
 	CLK_LOOKUP("iface_clk",		gsbi1_p_clk.c,	"qup_i2c.0"),
-    //# modify the gsbi2 as the i2c for sensor
-    #ifdef CONFIG_ZTEMT_SENSORS
-	CLK_LOOKUP("iface_clk",		gsbi2_p_clk.c,		"qup_i2c.2"),
-    #else
 	CLK_LOOKUP("iface_clk",		gsbi2_p_clk.c,		""),
-    #endif
-	CLK_LOOKUP("iface_clk",		gsbi3_p_clk.c,		"qup_i2c.3"),
-#ifdef CONFIG_MACH_LGE
-	CLK_LOOKUP("iface_clk",		gsbi4_p_clk.c,		"msm_serial_hsl.0"),
-#endif
+//wangtao fusion3-debug begin		
+	CLK_LOOKUP("iface_clk",		gsbi3_p_clk.c,		"msm_serial_hsl.0"),
+       CLK_LOOKUP("iface_clk",		gsbi3_p_clk.c,		"qup_i2c.3"),
+//wangtao fusion3-debug end	
+       CLK_LOOKUP("iface_clk",		gsbi2_p_clk.c,		"qup_i2c.2"),         //added by fanjiankang
 	CLK_LOOKUP("iface_clk",		gsbi4_p_clk.c,		"qup_i2c.4"),
-	CLK_LOOKUP("iface_clk",		gsbi4_p_clk.c,	"msm_serial_hs.1"),
 	CLK_LOOKUP("iface_clk",		gsbi5_p_clk.c,		"spi_qsd.0"),
 	CLK_LOOKUP("iface_clk",		gsbi5_p_clk.c,		"qup_i2c.5"),
-	CLK_LOOKUP("iface_clk",		gsbi6_p_clk.c,	"msm_serial_hs.0"),
-#ifdef CONFIG_MACH_LGE
-	CLK_LOOKUP("iface_clk",		gsbi7_p_clk.c,		""),
-#else
-	CLK_LOOKUP("iface_clk",		gsbi7_p_clk.c,	"msm_serial_hsl.0"),
-#endif
+	CLK_LOOKUP("iface_clk",		gsbi6_p_clk.c,		""),
+//wangtao fusion3-debug begin		
+	CLK_LOOKUP("iface_clk",		gsbi7_p_clk.c,	""),
+//wangtao fusion3-debug begin		
 	CLK_LOOKUP("ref_clk",	tsif_ref_clk.c,	"msm_tspp.0"),
 	CLK_LOOKUP("iface_clk",		tsif_p_clk.c,		"msm_tspp.0"),
 	CLK_LOOKUP("iface_clk",		usb_fs1_p_clk.c,	""),
@@ -5399,11 +5376,9 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("iface_clk",		sdc2_p_clk.c,		"msm_sdcc.2"),
 	CLK_LOOKUP("iface_clk",		sdc3_p_clk.c,		"msm_sdcc.3"),
 	CLK_LOOKUP("iface_clk",		sdc4_p_clk.c,		"msm_sdcc.4"),
-#ifdef CONFIG_MSM_PCIE
 	CLK_LOOKUP("iface_clk",		pcie_p_clk.c,		"msm_pcie"),
 	CLK_LOOKUP("ref_clk",		pcie_phy_ref_clk.c,	"msm_pcie"),
 	CLK_LOOKUP("bus_clk",		pcie_a_clk.c,		"msm_pcie"),
-#endif
 	CLK_LOOKUP("core_clk",		adm0_clk.c,		"msm_dmov"),
 	CLK_LOOKUP("iface_clk",		adm0_p_clk.c,		"msm_dmov"),
 	CLK_LOOKUP("iface_clk",		pmic_arb0_p_clk.c,	""),
@@ -5411,18 +5386,12 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("core_clk",		pmic_ssbi2_clk.c,	""),
 	CLK_LOOKUP("mem_clk",		rpm_msg_ram_p_clk.c,	""),
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-001a"),
-	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-0010"),
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-0034"),
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-0020"),
 	CLK_LOOKUP("cam_clk",		cam1_clk.c,	"4-0048"),
-	CLK_LOOKUP("cam_clk",		cam1_clk.c,	"4-006c"),
-	/* ZTEMT Added by LiuYongfeng, 2012/10/15 for uart gsbi5*/
-	CLK_LOOKUP("iface_clk",		gsbi5_p_clk.c,	"msm_serial_hsl.5"),
-	CLK_LOOKUP("core_clk",		gsbi5_uart_clk.c, "msm_serial_hsl.5"),
-	/* ZTEMT END */
-#ifdef CONFIG_ZTEMT_CAMERA_COMMON
-	CLK_LOOKUP("cam_clk",		cam2_clk.c,	"4-006d"),
-#endif
+	CLK_LOOKUP("cam_clk",		cam2_clk.c,	"4-006c"), //ZTEBSP yaotong 20121030
+	CLK_LOOKUP("cam_clk",		cam2_clk.c,	"4-007a"),//zhangzhao add mt9d115 sensor
+	CLK_LOOKUP("cam_clk",		cam2_clk.c,	"4-0030"),//zhangzhao add ov9740 sensor
 	CLK_LOOKUP("csi_src_clk",	csi0_src_clk.c,		"msm_csid.0"),
 	CLK_LOOKUP("csi_src_clk",	csi1_src_clk.c,		"msm_csid.1"),
 	CLK_LOOKUP("csi_src_clk",	csi2_src_clk.c,		"msm_csid.2"),
