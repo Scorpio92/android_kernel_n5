@@ -50,14 +50,9 @@
 #include <mach/iommu_domains.h>
 #include <mach/msm_cache_dump.h>
 
-/* Address of GSBI blocks */
+//* Address of GSBI blocks */
 #define MSM_GSBI1_PHYS		0x12440000
-//# modify the gsbi2 as the i2c for sensor
-#ifdef CONFIG_ZTEMT_SENSORS
-#define MSM_GSBI2_PHYS		0x12480000
-#else
-#define MSM_GSBI2_PHYS		0x13440000
-#endif
+#define MSM_GSBI2_PHYS        0x12400000                //added by fanjiankang for gsbi2
 #define MSM_GSBI3_PHYS		0x16200000
 #define MSM_GSBI4_PHYS		0x16300000
 #define MSM_GSBI5_PHYS		0x1A200000
@@ -67,22 +62,18 @@
 /* GSBI UART devices */
 #define MSM_UART1DM_PHYS	(MSM_GSBI1_PHYS + 0x10000)
 #define MSM_UART3DM_PHYS	(MSM_GSBI3_PHYS + 0x40000)
-#define MSM_UART4DM_PHYS	(MSM_GSBI4_PHYS + 0x40000)
-/* ZTEMT Added by LiuYongfeng, 2013/2/25 */
-#define MSM_UART5DM_PHYS	(MSM_GSBI5_PHYS + 0x40000)
-/* ZTEMT END */
-#define MSM_UART6DM_PHYS	(MSM_GSBI6_PHYS + 0x40000)
 #define MSM_UART7DM_PHYS	(MSM_GSBI7_PHYS + 0x40000)
 
 /* GSBI QUP devices */
 #define MSM_GSBI1_QUP_PHYS	(MSM_GSBI1_PHYS + 0x20000)
-#define MSM_GSBI2_QUP_PHYS	(MSM_GSBI2_PHYS + 0x20000)
+#define MSM_GSBI2_QUP_PHYS	(MSM_GSBI2_PHYS + 0xa0000)          //added by fanjiankang for gsbi2
 #define MSM_GSBI3_QUP_PHYS	(MSM_GSBI3_PHYS + 0x80000)
 #define MSM_GSBI4_QUP_PHYS	(MSM_GSBI4_PHYS + 0x80000)
 #define MSM_GSBI5_QUP_PHYS	(MSM_GSBI5_PHYS + 0x80000)
 #define MSM_GSBI6_QUP_PHYS	(MSM_GSBI6_PHYS + 0x80000)
 #define MSM_GSBI7_QUP_PHYS	(MSM_GSBI7_PHYS + 0x80000)
 #define MSM_QUP_SIZE		SZ_4K
+
 
 /* Address of SSBI CMD */
 #define MSM_PMIC1_SSBI_CMD_PHYS	0x00500000
@@ -224,48 +215,6 @@ struct platform_device apq8064_device_uart_gsbi1 = {
 	.resource	= resources_uart_gsbi1,
 };
 
-//# modify the gsbi2 as the i2c for sensor
-#ifdef CONFIG_ZTEMT_SENSORS
-static struct resource resources_qup_i2c_gsbi2[] = {
-	{
-		.name	= "gsbi_qup_i2c_addr",
-		.start	= MSM_GSBI2_PHYS,
-		.end	= MSM_GSBI2_PHYS + 4 - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.name	= "qup_phys_addr",
-		.start	= MSM_GSBI2_QUP_PHYS,
-		.end	= MSM_GSBI2_QUP_PHYS + MSM_QUP_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.name	= "qup_err_intr",
-		.start	= APQ8064_GSBI2_QUP_IRQ,
-		.end	= APQ8064_GSBI2_QUP_IRQ,
-		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.name	= "i2c_clk",
-		.start	= 25,
-		.end	= 25,
-		.flags	= IORESOURCE_IO,
-	},
-	{
-		.name	= "i2c_sda",
-		.start	= 24,
-		.end	= 24,
-		.flags	= IORESOURCE_IO,
-	},
-};
-
-struct platform_device apq8064_device_qup_i2c_gsbi2 = {
-	.name		= "qup_i2c",
-	.id		= 2,
-	.num_resources	= ARRAY_SIZE(resources_qup_i2c_gsbi2),
-	.resource	= resources_qup_i2c_gsbi2,
-};
-#endif
 static struct resource resources_uart_gsbi3[] = {
 	{
 		.start	= GSBI3_UARTDM_IRQ,
@@ -292,34 +241,7 @@ struct platform_device apq8064_device_uart_gsbi3 = {
 	.num_resources	= ARRAY_SIZE(resources_uart_gsbi3),
 	.resource	= resources_uart_gsbi3,
 };
-/* ZTEMT Added by LiuYongfeng, 2012/10/10 */
-static struct resource resources_uart_gsbi5[] = {
-	{
-		.start	= GSBI5_UARTDM_IRQ,//GSBI5 UART_UARTDM_IRQ
-		.end	= GSBI5_UARTDM_IRQ,
-		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.start	= MSM_UART5DM_PHYS,//GSBI5_UART_DM_BASE
-		.end	= MSM_UART5DM_PHYS + PAGE_SIZE - 1,
-		.name	= "uartdm_resource",
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.start	= MSM_GSBI5_PHYS,
-		.end	= MSM_GSBI5_PHYS + PAGE_SIZE - 1,
-		.name	= "gsbi_resource",
-		.flags	= IORESOURCE_MEM,
-	},
-};
 
-struct platform_device apq8064_device_uart_gsbi5 = {
-	.name	= "msm_serial_hsl",//serial driver name 
-	.id	= 5,//device ID
-	.num_resources	= ARRAY_SIZE(resources_uart_gsbi5),
-	.resource	= resources_uart_gsbi5,
-};
-/* ZTEMT END */
 static struct resource resources_qup_i2c_gsbi3[] = {
 	{
 		.name	= "gsbi_qup_i2c_addr",
@@ -393,82 +315,54 @@ struct platform_device apq8064_device_qup_i2c_gsbi1 = {
 	.resource	= resources_qup_i2c_gsbi1,
 };
 
+//added by fanjiankang begin for gsbi2
+
+static struct resource resources_qup_i2c_gsbi2[] = {
+	{
+		.name	= "gsbi_qup_i2c_addr",
+		.start	= MSM_GSBI2_PHYS,
+		.end	= MSM_GSBI2_PHYS + 4 - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "qup_phys_addr",
+		.start	= MSM_GSBI2_QUP_PHYS,
+		.end	= MSM_GSBI2_QUP_PHYS + MSM_QUP_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "qup_err_intr",
+		.start	= APQ8064_GSBI2_QUP_IRQ,
+		.end	= APQ8064_GSBI2_QUP_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.name	= "i2c_clk",
+		.start	= 25,
+		.end	= 25,
+		.flags	= IORESOURCE_IO,
+	},
+	{
+		.name	= "i2c_sda",
+		.start	= 24,
+		.end	= 24,
+		.flags	= IORESOURCE_IO,
+	},
+};
+
+struct platform_device apq8064_device_qup_i2c_gsbi2 = {
+	.name		= "qup_i2c",
+	.id		= 2,
+	.num_resources	= ARRAY_SIZE(resources_qup_i2c_gsbi2),
+	.resource	= resources_qup_i2c_gsbi2,
+};
+
+//added by fanjiankang begin for gsbi2
 struct platform_device apq8064_device_qup_i2c_gsbi3 = {
 	.name		= "qup_i2c",
 	.id		= 3,
 	.num_resources	= ARRAY_SIZE(resources_qup_i2c_gsbi3),
 	.resource	= resources_qup_i2c_gsbi3,
-};
-
-static struct resource resources_uart_gsbi4[] = {
-	{
-		.start = GSBI4_UARTDM_IRQ,
-		.end = GSBI4_UARTDM_IRQ,
-		.flags = IORESOURCE_IRQ,
-	},
-	{
-		.start = MSM_UART4DM_PHYS,
-		.end = MSM_UART4DM_PHYS + PAGE_SIZE - 1,
-		.name = "uartdm_resource",
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.start = MSM_GSBI4_PHYS,
-		.end = MSM_GSBI4_PHYS + PAGE_SIZE - 1,
-		.name = "gsbi_resource",
-		.flags = IORESOURCE_MEM,
-	},
-};
-
-struct platform_device apq8064_device_uart_gsbi4 = {
-	.name = "msm_serial_hsl",
-	.id = 0,
-	.num_resources = ARRAY_SIZE(resources_uart_gsbi4),
-	.resource = resources_uart_gsbi4,
-};
-
-/* GSBI 4 used into UARTDM Mode for 8064 SGLTE */
-static struct resource msm_uart_dm4_resources[] = {
-	{
-		.start  = MSM_UART4DM_PHYS,
-		.end    = MSM_UART4DM_PHYS + PAGE_SIZE - 1,
-		.name   = "uartdm_resource",
-		.flags  = IORESOURCE_MEM,
-	},
-	{
-		.start  = GSBI4_UARTDM_IRQ,
-		.end    = GSBI4_UARTDM_IRQ,
-		.flags  = IORESOURCE_IRQ,
-	},
-	{
-		.start  = MSM_GSBI4_PHYS,
-		.end    = MSM_GSBI4_PHYS + 4 - 1,
-		.name   = "gsbi_resource",
-		.flags  = IORESOURCE_MEM,
-	},
-	{
-		.start  = DMOV_APQ8064_HSUART_GSBI4_TX_CHAN,
-		.end    = DMOV_APQ8064_HSUART_GSBI4_RX_CHAN,
-		.name   = "uartdm_channels",
-		.flags  = IORESOURCE_DMA,
-	},
-	{
-		.start  = DMOV_APQ8064_HSUART_GSBI4_TX_CRCI,
-		.end    = DMOV_APQ8064_HSUART_GSBI4_RX_CRCI,
-		.name   = "uartdm_crci",
-		.flags  = IORESOURCE_DMA,
-	},
-};
-static u64 msm_uart_dm4_dma_mask = DMA_BIT_MASK(32);
-struct platform_device apq8064_device_uartdm_gsbi4 = {
-	.name   = "msm_serial_hs",
-	.id     = 1,
-	.num_resources  = ARRAY_SIZE(msm_uart_dm4_resources),
-	.resource       = msm_uart_dm4_resources,
-	.dev    = {
-		.dma_mask		= &msm_uart_dm4_dma_mask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	},
 };
 
 static struct resource resources_qup_i2c_gsbi4[] = {
@@ -572,55 +466,19 @@ static struct resource resources_qup_i2c_gsbi5[] = {
 	},
 };
 
-struct platform_device mpq8064_device_qup_i2c_gsbi5 = {
+//jiaobaocun added for gsbi5
+struct platform_device apq8064_device_qup_i2c_gsbi5 = {
 	.name		= "qup_i2c",
 	.id		= 5,
 	.num_resources	= ARRAY_SIZE(resources_qup_i2c_gsbi5),
 	.resource	= resources_qup_i2c_gsbi5,
 };
 
-/* GSBI 6 used into UARTDM Mode */
-static struct resource msm_uart_dm6_resources[] = {
-	{
-		.start  = MSM_UART6DM_PHYS,
-		.end    = MSM_UART6DM_PHYS + PAGE_SIZE - 1,
-		.name   = "uartdm_resource",
-		.flags  = IORESOURCE_MEM,
-	},
-	{
-		.start  = GSBI6_UARTDM_IRQ,
-		.end    = GSBI6_UARTDM_IRQ,
-		.flags  = IORESOURCE_IRQ,
-	},
-	{
-		.start  = MSM_GSBI6_PHYS,
-		.end    = MSM_GSBI6_PHYS + 4 - 1,
-		.name   = "gsbi_resource",
-		.flags  = IORESOURCE_MEM,
-	},
-	{
-		.start  = DMOV_MPQ8064_HSUART_GSBI6_TX_CHAN,
-		.end    = DMOV_MPQ8064_HSUART_GSBI6_RX_CHAN,
-		.name   = "uartdm_channels",
-		.flags  = IORESOURCE_DMA,
-	},
-	{
-		.start  = DMOV_MPQ8064_HSUART_GSBI6_TX_CRCI,
-		.end    = DMOV_MPQ8064_HSUART_GSBI6_RX_CRCI,
-		.name   = "uartdm_crci",
-		.flags  = IORESOURCE_DMA,
-	},
-};
-static u64 msm_uart_dm6_dma_mask = DMA_BIT_MASK(32);
-struct platform_device mpq8064_device_uartdm_gsbi6 = {
-	.name   = "msm_serial_hs",
-	.id     = 0,
-	.num_resources  = ARRAY_SIZE(msm_uart_dm6_resources),
-	.resource       = msm_uart_dm6_resources,
-	.dev    = {
-		.dma_mask		= &msm_uart_dm6_dma_mask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	},
+struct platform_device mpq8064_device_qup_i2c_gsbi5 = {
+	.name		= "qup_i2c",
+	.id		= 5,
+	.num_resources	= ARRAY_SIZE(resources_qup_i2c_gsbi5),
+	.resource	= resources_qup_i2c_gsbi5,
 };
 
 static struct resource resources_uart_gsbi7[] = {

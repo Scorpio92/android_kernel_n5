@@ -1794,12 +1794,12 @@ static int isa1200_power(int on)
 	unsigned int gpio = ISA1200_HAP_CLK_PM8038;
 	enum pm8xxx_aux_clk_id clk_id = CLK_MP3_1;
 	int rc = 0;
-
+/*
 	if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917) {
 		gpio = ISA1200_HAP_CLK_PM8917;
 		clk_id = CLK_MP3_2;
 	}
-
+*/
 	gpio_set_value_cansleep(gpio, !!on);
 
 	if (on)
@@ -1819,10 +1819,10 @@ static int isa1200_dev_setup(bool enable)
 {
 	unsigned int gpio = ISA1200_HAP_CLK_PM8038;
 	int rc = 0;
-
+/*
 	if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
 		gpio = ISA1200_HAP_CLK_PM8917;
-
+*/
 	if (!enable)
 		goto fail_gpio_dir;
 
@@ -2182,7 +2182,7 @@ static struct gpio_keys_button keys_8930_pm8038[] = {
 		.debounce_interval = 15,
 	},
 };
-
+/*
 static struct gpio_keys_button keys_8930_pm8917[] = {
 	{
 		.code = KEY_VOLUMEUP,
@@ -2221,7 +2221,7 @@ static struct gpio_keys_button keys_8930_pm8917[] = {
 		.debounce_interval = 15,
 	},
 };
-
+*/
 /* Add GPIO keys for 8930 */
 static struct gpio_keys_platform_data gpio_keys_8930_pdata = {
 	.buttons = keys_8930_pm8038,
@@ -2410,9 +2410,9 @@ static struct platform_device *pmic_pm8038_devices[] __initdata = {
 };
 
 /* ext_5v and ext_otg_sw are not present when using PM8917 */
-static struct platform_device *pmic_pm8917_devices[] __initdata = {
+/*static struct platform_device *pmic_pm8917_devices[] __initdata = {
 	&msm8960_device_ssbi_pmic,
-};
+};*/
 
 static struct platform_device *i2c_qup_devices[] __initdata = {
 	&msm8960_device_qup_i2c_gsbi4,
@@ -2673,7 +2673,7 @@ static struct msm_rpmrs_platform_data msm_rpmrs_data __initdata = {
 		[MSM_RPMRS_ID_RPM_CTL]		= MSM_RPM_ID_RPM_CTL,
 	},
 };
-
+/*
 static struct msm_rpmrs_platform_data msm_rpmrs_data_pm8917 __initdata = {
 	.levels = &msm_rpmrs_levels[0],
 	.num_levels = ARRAY_SIZE(msm_rpmrs_levels),
@@ -2700,7 +2700,7 @@ static struct msm_rpmrs_platform_data msm_rpmrs_data_pm8917 __initdata = {
 		[MSM_RPMRS_ID_RPM_CTL]		= MSM_RPM_ID_RPM_CTL,
 	},
 };
-
+*/
 static struct msm_pm_boot_platform_data msm_pm_boot_pdata __initdata = {
 	.mode = MSM_PM_BOOT_CONFIG_TZ,
 };
@@ -2901,7 +2901,7 @@ static void __init register_i2c_devices(void)
 }
 
 /*Modify the WCD9xxx platform data to support supplies from PM8917 */
-static void __init msm8930_pm8917_wcd9xxx_pdata_fixup(
+/*static void __init msm8930_pm8917_wcd9xxx_pdata_fixup(
 		struct wcd9xxx_pdata *cdc_pdata)
 {
 	int i;
@@ -2919,8 +2919,9 @@ static void __init msm8930_pm8917_wcd9xxx_pdata_fixup(
 		}
 	}
 }
-
+*/
 /* Modify platform data values to match requirements for PM8917. */
+/*
 static void __init msm8930_pm8917_pdata_fixup(void)
 {
 	struct acpuclk_platform_data *pdata;
@@ -2946,7 +2947,7 @@ static void __init msm8930_pm8917_pdata_fixup(void)
 
 	pdata = msm8930ab_device_acpuclk.dev.platform_data;
 	pdata->uses_pm8917 = true;
-}
+}*/
 static void __init msm8930ab_update_krait_spm(void)
  {
 	int i;
@@ -3005,21 +3006,21 @@ static void __init msm8930_cdp_init(void)
 	int i, reg_size = 0;
 	int minor_ver = SOCINFO_VERSION_MINOR(socinfo_get_platform_version());
 	int major_ver = SOCINFO_VERSION_MAJOR(socinfo_get_platform_version());
-	if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
-		msm8930_pm8917_pdata_fixup();
+	//if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
+	//	msm8930_pm8917_pdata_fixup();
 	if (meminfo_init(SYS_MEMORY, SZ_256M) < 0)
 		pr_err("meminfo_init() failed!\n");
 
 	platform_device_register(&msm_gpio_device);
 	msm_tsens_early_init(&msm_tsens_pdata);
 	msm_thermal_init(&msm_thermal_pdata);
-	if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917) {
+	//if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917) {
 		BUG_ON(msm_rpm_init(&msm8930_rpm_data));
 		BUG_ON(msm_rpmrs_levels_init(&msm_rpmrs_data));
-	} else {
-		BUG_ON(msm_rpm_init(&msm8930_rpm_data_pm8917));
-		BUG_ON(msm_rpmrs_levels_init(&msm_rpmrs_data_pm8917));
-	}
+	//} else {
+	//	BUG_ON(msm_rpm_init(&msm8930_rpm_data_pm8917));
+	//	BUG_ON(msm_rpmrs_levels_init(&msm_rpmrs_data_pm8917));
+	//}
 
 	/*
 	 * Configure LDO L17 as away on only for EVT1,
@@ -3033,30 +3034,23 @@ static void __init msm8930_cdp_init(void)
 	if (msm_xo_init())
 		pr_err("Failed to initialize XO votes\n");
 	platform_device_register(&msm8930_device_rpm_regulator);
-	if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
-		msm_clock_init(&msm8930_pm8917_clock_init_data);
-	else
+	//if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
+	//	msm_clock_init(&msm8930_pm8917_clock_init_data);
+	//else
 		msm_clock_init(&msm8930_clock_init_data);
-
+/*
 	if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917) {
-		/*
-		 * By default, set USB mode as USB Peripheral only due to
-		 * hardware rework requirement for USB Host Mode.
-		 * Provide pmic_id_irq number only if host mode is enable
-		 * by user assuming that hardware rework is available.
-		 */
 		if (enable_usb_host_mode) {
-			/* MPP01 IRQ number */
 			msm_otg_pdata.pmic_id_irq =
 				PM8921_MPP_IRQ(PM8917_IRQ_BASE, 1);
 		} else {
 			pr_err("Enabling USB Peripheral Only mode.\n");
 			msm_otg_pdata.mode = USB_PERIPHERAL;
 		}
-	} else {
+	} else {*/
 		msm_otg_pdata.pmic_id_irq =
 				PM8038_USB_ID_IN_IRQ(PM8038_IRQ_BASE);
-	}
+	//}
 
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE &&
 						machine_is_msm8930_evt()) {
@@ -3114,7 +3108,7 @@ static void __init msm8930_cdp_init(void)
 	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
 	msm_spm_l2_init(msm_spm_l2_data);
 	msm8930_init_buses();
-	if (cpu_is_msm8627()) {
+/*	if (cpu_is_msm8627()) {
 		platform_add_devices(msm8627_footswitch,
 				msm8627_num_footswitch);
 	} else {
@@ -3124,7 +3118,7 @@ static void __init msm8930_cdp_init(void)
 		else
 			platform_add_devices(msm8930_footswitch,
 					msm8930_num_footswitch);
-	}
+	}*/
 	if (cpu_is_msm8627())
 		platform_device_register(&msm8627_device_acpuclk);
 	else if (cpu_is_msm8930())
@@ -3135,13 +3129,13 @@ static void __init msm8930_cdp_init(void)
 		platform_device_register(&msm8930ab_device_acpuclk);
 	platform_add_devices(early_common_devices,
 				ARRAY_SIZE(early_common_devices));
-	if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917)
+	//if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917)
 		platform_add_devices(pmic_pm8038_devices,
 					ARRAY_SIZE(pmic_pm8038_devices));
-	else
+/*	else
 		platform_add_devices(pmic_pm8917_devices,
 					ARRAY_SIZE(pmic_pm8917_devices));
-
+*/
 	if (machine_is_msm8930_evt()) {
 	        /* It is QRD Device, clock should be set appropraitely */
 		if ((SOCINFO_VERSION_MAJOR(socinfo_get_platform_version()) == 1)

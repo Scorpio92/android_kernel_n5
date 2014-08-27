@@ -33,6 +33,10 @@
 #include <linux/memblock.h>
 #include <linux/msm_thermal.h>
 #include <linux/i2c/atmel_mxt_ts.h>
+//shihuiqin++
+#include <linux/atmel_ts.h>
+#include <linux/synaptics_i2c_rmi.h> //zhangzhao added synaptics for 865a10 2012-8-23
+//shihuiqin--
 #include <linux/cyttsp-qc.h>
 #include <linux/i2c/isa1200.h>
 #include <linux/gpio_keys.h>
@@ -76,6 +80,7 @@
 #include <mach/msm_pcie.h>
 #include <mach/restart.h>
 #include <mach/msm_iomap.h>
+#include <media/radio_si470x.h>		//jiaobaocun
 #include <mach/msm_serial_hs.h>
 
 #include "msm_watchdog.h"
@@ -89,6 +94,19 @@
 #include "devices-msm8x60.h"
 #include "smd_private.h"
 #include "sysmon.h"
+
+#ifdef CONFIG_PN544_NFC
+#include <linux/nfc/pn544.h>
+#endif
+
+//shihuiqin++
+//ZTEBSP fanjiankang for sensor,20120628++
+#include <linux/i2c/lsm330dlc.h>
+#include <linux/akm8963.h>
+//ZTEBSP fanjiankang for sensor,20120628++
+#if defined(CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
+//#define SPI_SW_CONTROL    /*SPI_HW_CONTROL*/		/*jiaobaocun deleted for gsbi5 as i2c mode*/
+#endif
 
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
@@ -1558,6 +1576,897 @@ static struct i2c_board_info cyttsp_info[] __initdata = {
 	},
 };
 
+/*[ECID:000000] ZTEBSP shihuiqin, for touchscreen_mxt224, 20120216 start*/
+#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT   /*CONFIG_TOUCHSCREEN_ATMEL_MAXTOUCH*/
+#define ATMEL_TS_I2C_NAME "maXTouch"
+
+static struct regulator_bulk_data regs_atmel[] = {
+//wangbing, for mxt224 debug, s4 should be always on debfined in msm_rpm_regulator_init_data
+//	{ .supply = "8921_s4",  .min_uV = 1800000, .max_uV = 1800000 },
+	{ .supply = "8921_lvs4", .min_uV = 1800000, .max_uV = 1800000 },
+	
+};
+
+static struct regulator_bulk_data regs_atmel1[] = {
+//wangbing, for mxt224 debug, s4 should be always on debfined in msm_rpm_regulator_init_data
+//	{ .supply = "8921_s4",  .min_uV = 1800000, .max_uV = 1800000 },
+	//{ .supply = "8921_l9", .min_uV = 2850000, .max_uV = 2850000 },
+	{ .supply = "8921_l9", .min_uV = 3000000, .max_uV = 3000000 },
+	
+};
+
+
+#define ATMEL_TS_GPIO_IRQ 32
+#define ATMEL_TS_RESET 33
+
+//wangbing, temp for mxt224 debug
+#if 0
+static int atmel_ts_power_on(int on)
+{
+	int rc = on ?
+		regulator_bulk_enable(ARRAY_SIZE(regs_atmel), regs_atmel) :
+		regulator_bulk_disable(ARRAY_SIZE(regs_atmel), regs_atmel);
+
+	if (rc)
+		pr_err("%s: could not %sable regulators: %d\n",
+				__func__, on ? "en" : "dis", rc);
+	else
+		msleep(50);
+
+	if (on)
+		gpio_set_value_cansleep(ATMEL_TS_RESET, 1); /* disp disable (resx=0) */
+	else
+		gpio_set_value_cansleep(ATMEL_TS_RESET, 0); /* disp disable (resx=0) */
+
+	return rc;
+}
+#endif
+static int atmel_ts_platform_init(struct i2c_client *client)
+{
+	int rc;
+	struct device *dev = &client->dev;
+
+	rc = regulator_bulk_get(dev, ARRAY_SIZE(regs_atmel), regs_atmel);
+	if (rc) {
+		dev_err(dev, "%s: could not get regulators: %d\n",
+				__func__, rc);
+		goto out;
+	}
+
+
+	rc = regulator_bulk_get(dev, ARRAY_SIZE(regs_atmel1), regs_atmel1);
+	if (rc) {
+		dev_err(dev, "%s: could not get regulators: %d\n",
+				__func__, rc);
+		goto out;
+	}
+//wangbing, temp for mxt224 debug, lvs not support the voltage setting.
+#if 1
+	rc = regulator_bulk_set_voltage(ARRAY_SIZE(regs_atmel1), regs_atmel1);
+	if (rc) {
+		dev_err(dev, "%s: could not set voltages: %d\n",
+				__func__, rc);
+		goto reg_free;
+	}
+#endif	
+
+
+//wangbing, for mxt224 debug
+	rc = gpio_request(ATMEL_TS_RESET, "atmel_ts_reset");
+	if (rc) {
+		dev_err(dev, "%s: unable to request gpio %d\n",
+			__func__, ATMEL_TS_RESET);
+	}
+	rc = gpio_direction_output(ATMEL_TS_RESET, 0);
+	if (rc) {
+		pr_err("%s: unable to set_direction for gpio %d\n",
+				__func__, ATMEL_TS_RESET);
+	}
+
+	/* configure touchscreen interrupt gpio */
+	rc = gpio_request(ATMEL_TS_GPIO_IRQ, "atmel_maxtouch_gpio");
+	if (rc) {
+		dev_err(dev, "%s: unable to request gpio %d\n",
+			__func__, ATMEL_TS_GPIO_IRQ);
+		goto ts_gpio_tlmm_unconfig;
+	}
+
+//wangbing, for mxt224 debug, need internal pullup resistor.
+	rc = gpio_tlmm_config(GPIO_CFG(ATMEL_TS_GPIO_IRQ, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_PULL_UP,
+				GPIO_CFG_8MA), GPIO_CFG_ENABLE);
+	if (rc) {
+		pr_err("%s: gpio_tlmm_config for %d failed\n",
+			__func__, ATMEL_TS_GPIO_IRQ);
+		goto reg_free;
+	}
+
+//wangbing, for mxt224 debug
+	regulator_bulk_enable(ARRAY_SIZE(regs_atmel), regs_atmel);
+
+	regulator_bulk_enable(ARRAY_SIZE(regs_atmel1), regs_atmel1);
+
+	msleep(50);
+	gpio_set_value_cansleep(ATMEL_TS_RESET, 1); /* disp disable (resx=0) */
+
+	return 0;
+
+ts_gpio_tlmm_unconfig:
+	gpio_tlmm_config(GPIO_CFG(ATMEL_TS_GPIO_IRQ, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+reg_free:
+	regulator_bulk_free(ARRAY_SIZE(regs_atmel), regs_atmel);
+out:
+	return rc;
+}
+
+static int atmel_ts_platform_exit(struct i2c_client *client)
+{
+	gpio_free(ATMEL_TS_GPIO_IRQ);
+	gpio_tlmm_config(GPIO_CFG(ATMEL_TS_GPIO_IRQ, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+	gpio_free(ATMEL_TS_RESET);//zhangzhao added synaptics for 865a10 2012-8-23
+	gpio_tlmm_config(GPIO_CFG(ATMEL_TS_RESET, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+	
+	regulator_bulk_disable(ARRAY_SIZE(regs_atmel), regs_atmel);
+	regulator_bulk_free(ARRAY_SIZE(regs_atmel), regs_atmel);
+	return 0;
+}
+
+static int atmel_ts_read_chg(void)
+{
+	return gpio_get_value(ATMEL_TS_GPIO_IRQ);
+}
+
+static u8 atmel_ts_valid_interrupt(void)
+{
+	return !atmel_ts_read_chg();
+}
+
+#define ATMEL_X_OFFSET 13
+#define ATMEL_Y_OFFSET 0
+
+static struct mxt_platform_data_zte atmel_ts_pdata = {
+	.numtouch = 10,
+	.init_platform_hw = atmel_ts_platform_init,
+	.exit_platform_hw = atmel_ts_platform_exit,
+//wangbing, temp for mxt224 debug
+//	.power_on = atmel_ts_power_on,
+	.max_x = 480,
+	.max_y = 800,
+	.valid_interrupt = atmel_ts_valid_interrupt,
+	.read_chg = atmel_ts_read_chg,
+        .config_T7 = {255, 255, 50},
+        .config_T8 = {10,0,20, 20, 0, 0, 30, 50,20,25},
+		/** ZTE_MODIFY yuehongliang modified for 7" touch screen accelerated deletion, yuehongliang0004 */
+        //.config_T9 = {131, 0, 0, 18, 11, 1, 0, 30, 2, 6, 10, 2, 2, 48, 5, 10, 30, 3, 0, 5, 32, 3, 0, 0, 0, 0, 64, 0, 0, 0, 18},/** ZTE_MODIFY yuehongliang modified for the boundary of touch screen, yuehongliang0003 */
+        .config_T9 = {131, 0, 0, 19, 11, 0, 0, 40, 3, 1, 0, 0, 0, 0, 10, 5, 5, 10, 92, 3,
+                    /*860*/ 224, 1,/*480*/ 0, 0, 0, 0, 0, 0, 0, 0, 10,6},/** ZTE_MODIFY yuehongliang modified for improve the threshold when startup device, yuehongliang0005 */
+		/** ZTE_MODIFY end yuehongliang0004 */
+        //.config_T15 = {3, 0, 11, 3, 1, 2, 1, 30, 2, 0, 0},
+	.config_T15 ={0/*enable touch key*/, 27, 41, 3, 1, 0, 32, 40/*30 down the threshhold*/, 3, 0, 0},
+	.config_T18 = {0, 0},
+	.config_T19 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        .config_T20 = {13, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0},
+        .config_T22 = {13, 0, 0, 25, 0, 230, 255, 4, 50, 0, 1, 0, 15, 20, 25, 30, 2},/** ZTE_MODIFY yuehongliang modified for improve the threshold when startup device, yuehongliang0005 */
+        .config_T23 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},/** ZTE_MODIFY yuehongliang modified for improve the threshold when startup device, yuehongliang0005 */
+        .config_T24 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        .config_T25 = {3, 0, 224, 46, 136, 19, 0, 0, 0, 0, 0, 0, 0, 0},
+        //.config_T27 = {0, 0, 0, 0, 0, 0, 0},
+        .config_T28 = {0, 0, 3, 16, 16, 60},
+        .config_T38 = {0, 0, 0, 0, 0, 0, 0,0},
+};
+
+static struct i2c_board_info atmel_ts_i2c_info[] __initdata = {
+	{
+		I2C_BOARD_INFO(ATMEL_TS_I2C_NAME, 0x4a),
+		.platform_data = &atmel_ts_pdata,
+		.irq = MSM_GPIO_TO_INT(ATMEL_TS_GPIO_IRQ),
+	},
+};
+#endif
+/*[ECID:000000] ZTEBSP shihuiqin, for touchscreen_mxt224, 20120216 end*/
+//zhangzhao added synaptics for 865a10 2012-8-23 start
+#define SYNAPTICS_TS_I2C_NAME "synaptics-rmi-ts"
+
+static struct regulator_bulk_data regs_synaptics[] = {
+//wangbing, for mxt224 debug, s4 should be always on debfined in msm_rpm_regulator_init_data
+//	{ .supply = "8921_s4",  .min_uV = 1800000, .max_uV = 1800000 },
+	{ .supply = "8921_lvs4", .min_uV = 1800000, .max_uV = 1800000 },
+	
+};
+
+static struct regulator_bulk_data regs_synaptics1[] = {
+//wangbing, for mxt224 debug, s4 should be always on debfined in msm_rpm_regulator_init_data
+//	{ .supply = "8921_s4",  .min_uV = 1800000, .max_uV = 1800000 },
+	//{ .supply = "8921_l9", .min_uV = 2850000, .max_uV = 2850000 },
+	{ .supply = "8921_l9", .min_uV = 3000000, .max_uV = 3000000 },
+	
+};
+
+
+#define SYNAPTICS_TS_GPIO_IRQ 32
+#define SYNAPTICS_TS_RESET 33
+
+static int synaptics_ts_platform_init(struct i2c_client *client)
+{
+	int rc;
+	struct device *dev = &client->dev;
+
+	pr_err("%s ---- power request\n",__func__);
+	rc = regulator_bulk_get(dev, ARRAY_SIZE(regs_synaptics), regs_synaptics);
+	if (rc) {
+		dev_err(dev, "%s: could not get regulators: %d\n",
+				__func__, rc);
+		goto out;
+	}
+
+
+	rc = regulator_bulk_get(dev, ARRAY_SIZE(regs_synaptics1), regs_synaptics1);
+	if (rc) {
+		dev_err(dev, "%s: could not get regulators: %d\n",
+				__func__, rc);
+		goto out;
+	}
+//wangbing, temp for mxt224 debug, lvs not support the voltage setting.
+#if 1
+	rc = regulator_bulk_set_voltage(ARRAY_SIZE(regs_synaptics1), regs_synaptics1);
+	if (rc) {
+		dev_err(dev, "%s: could not set voltages: %d\n",
+				__func__, rc);
+		goto reg_free;
+	}
+
+
+#endif	
+
+
+//wangbing, for mxt224 debug
+	rc = gpio_request(SYNAPTICS_TS_RESET, "atmel_ts_reset");
+	if (rc) {
+		dev_err(dev, "%s: unable to request gpio %d\n",
+			__func__, SYNAPTICS_TS_RESET);
+	}
+	rc = gpio_direction_output(SYNAPTICS_TS_RESET, 0);
+	if (rc) {
+		pr_err("%s: unable to set_direction for gpio %d\n",
+				__func__, SYNAPTICS_TS_RESET);
+	}
+
+	/* configure touchscreen interrupt gpio */
+	rc = gpio_request(SYNAPTICS_TS_GPIO_IRQ, "atmel_maxtouch_gpio");
+	if (rc) {
+		dev_err(dev, "%s: unable to request gpio %d\n",
+			__func__, SYNAPTICS_TS_GPIO_IRQ);
+		goto ts_gpio_tlmm_unconfig;
+	}
+
+//wangbing, for mxt224 debug, need internal pullup resistor.
+	rc = gpio_tlmm_config(GPIO_CFG(SYNAPTICS_TS_GPIO_IRQ, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_PULL_UP,
+				GPIO_CFG_8MA), GPIO_CFG_ENABLE);
+	if (rc) {
+		pr_err("%s: gpio_tlmm_config for %d failed\n",
+			__func__, SYNAPTICS_TS_GPIO_IRQ);
+		goto reg_free;
+	}
+
+//wangbing, for mxt224 debug
+	regulator_bulk_enable(ARRAY_SIZE(regs_synaptics), regs_synaptics);
+
+	regulator_bulk_enable(ARRAY_SIZE(regs_synaptics1), regs_synaptics1);
+
+	msleep(50);
+	gpio_set_value_cansleep(SYNAPTICS_TS_RESET, 1); /* disp disable (resx=0) */
+
+		dev_err(dev, "%s: get regulators over\n",__func__);
+
+	return 0;
+
+ts_gpio_tlmm_unconfig:
+	gpio_tlmm_config(GPIO_CFG(SYNAPTICS_TS_GPIO_IRQ, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+reg_free:
+	regulator_bulk_free(ARRAY_SIZE(regs_atmel), regs_atmel);
+out:
+		dev_err(dev, "%s: get regulators faild\n",__func__);
+	return rc;
+}
+
+static int synaptics_ts_platform_exit(void)
+{
+	gpio_free(SYNAPTICS_TS_GPIO_IRQ);
+	gpio_tlmm_config(GPIO_CFG(SYNAPTICS_TS_GPIO_IRQ, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+	gpio_free(SYNAPTICS_TS_RESET);
+	gpio_tlmm_config(GPIO_CFG(SYNAPTICS_TS_RESET, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+	regulator_bulk_disable(ARRAY_SIZE(regs_synaptics1), regs_synaptics1);
+	regulator_bulk_free(ARRAY_SIZE(regs_synaptics), regs_synaptics);
+	return 0;
+}
+
+
+
+static struct synaptics_ts_platform_data synaptics_ts_pdata = {
+	.irq_gpio = SYNAPTICS_TS_GPIO_IRQ,
+	.reset_gpio = SYNAPTICS_TS_RESET,
+	//.irq_flags = IRQF_TRIGGER_FALLING,
+	.init_platform_hw = synaptics_ts_platform_init,
+	.exit_platform_hw = synaptics_ts_platform_exit,
+};
+
+static struct i2c_board_info synaptics_ts_i2c_info[] __initdata = {
+	{
+		I2C_BOARD_INFO(SYNAPTICS_TS_I2C_NAME, 0x22),
+		.platform_data = &synaptics_ts_pdata,
+		.irq = MSM_GPIO_TO_INT(SYNAPTICS_TS_GPIO_IRQ),
+	},
+};
+//zhangzhao added synaptics for 865a10 2012-8-23 end
+
+/*haowiewie add atmel touch for p864a20 2012-9-26 start */
+#define ATMEL_MXT_TS_I2C_NAME "atmel_mxt_ts"
+
+static struct regulator_bulk_data regs_atmel_mxt[] = {
+//wangbing, for mxt224 debug, s4 should be always on debfined in msm_rpm_regulator_init_data
+//	{ .supply = "8921_s4",  .min_uV = 1800000, .max_uV = 1800000 },
+	{ .supply = "8921_lvs4", .min_uV = 1800000, .max_uV = 1800000 },
+	
+};
+
+static struct regulator_bulk_data regs_atmet_mxtx[] = {
+//wangbing, for mxt224 debug, s4 should be always on debfined in msm_rpm_regulator_init_data
+//	{ .supply = "8921_s4",  .min_uV = 1800000, .max_uV = 1800000 },
+	//{ .supply = "8921_l9", .min_uV = 2850000, .max_uV = 2850000 },
+	{ .supply = "8921_l9", .min_uV = 3000000, .max_uV = 3000000 },
+	
+};
+
+#define ATMEL_MXT_TS_GPIO_IRQ 32
+#define ATMEL_MXT_TS_RESET 33
+
+static int atmel_mxt_ts_platform_init(struct i2c_client *client)
+{
+	int rc;
+	struct device *dev = &client->dev;
+
+	pr_err("%s ---- power request\n",__func__);
+	rc = regulator_bulk_get(dev, ARRAY_SIZE(regs_atmel_mxt), regs_atmel_mxt);
+	if (rc) {
+		dev_err(dev, "%s: could not get regulators: %d\n",
+				__func__, rc);
+		goto out;
+	}
+
+
+	rc = regulator_bulk_get(dev, ARRAY_SIZE(regs_atmet_mxtx), regs_atmet_mxtx);
+	if (rc) {
+		dev_err(dev, "%s: could not get regulators: %d\n",
+				__func__, rc);
+		goto out;
+	}
+//wangbing, temp for mxt224 debug, lvs not support the voltage setting.
+#if 1
+	rc = regulator_bulk_set_voltage(ARRAY_SIZE(regs_atmet_mxtx), regs_atmet_mxtx);
+	if (rc) {
+		dev_err(dev, "%s: could not set voltages: %d\n",
+				__func__, rc);
+		goto reg_free;
+	}
+
+
+#endif	
+
+
+//wangbing, for mxt224 debug
+	rc = gpio_request(ATMEL_MXT_TS_RESET, "atmel_ts_reset");
+	if (rc) {
+		dev_err(dev, "%s: unable to request gpio %d\n",
+			__func__, ATMEL_MXT_TS_RESET);
+	}
+	rc = gpio_direction_output(ATMEL_MXT_TS_RESET, 0);
+	if (rc) {
+		pr_err("%s: unable to set_direction for gpio %d\n",
+				__func__, ATMEL_MXT_TS_RESET);
+	}
+
+	/* configure touchscreen interrupt gpio */
+	rc = gpio_request(ATMEL_MXT_TS_GPIO_IRQ, "atmel_maxtouch_gpio");
+	if (rc) {
+		dev_err(dev, "%s: unable to request gpio %d\n",
+			__func__, ATMEL_MXT_TS_GPIO_IRQ);
+		goto ts_gpio_tlmm_unconfig;
+	}
+
+//wangbing, for mxt224 debug, need internal pullup resistor.
+	rc = gpio_tlmm_config(GPIO_CFG(ATMEL_MXT_TS_GPIO_IRQ, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_PULL_UP,
+				GPIO_CFG_8MA), GPIO_CFG_ENABLE);
+	if (rc) {
+		pr_err("%s: gpio_tlmm_config for %d failed\n",
+			__func__, ATMEL_MXT_TS_GPIO_IRQ);
+		goto reg_free;
+	}
+
+//wangbing, for mxt224 debug
+	regulator_bulk_enable(ARRAY_SIZE(regs_atmel_mxt), regs_atmel_mxt);
+
+	regulator_bulk_enable(ARRAY_SIZE(regs_atmet_mxtx), regs_atmet_mxtx);
+
+	msleep(50);
+	gpio_set_value_cansleep(ATMEL_MXT_TS_RESET, 1); /* disp disable (resx=0) */
+	msleep(30);
+//	gpio_set_value_cansleep(ATMEL_MXT_TS_RESET, 1);
+
+		dev_err(dev, "%s: get regulators over\n",__func__);
+
+	return 0;
+
+ts_gpio_tlmm_unconfig:
+	gpio_tlmm_config(GPIO_CFG(ATMEL_MXT_TS_GPIO_IRQ, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+reg_free:
+	regulator_bulk_free(ARRAY_SIZE(regs_atmel_mxt), regs_atmel_mxt);
+out:
+		dev_err(dev, "%s: get regulators faild\n",__func__);
+	return rc;
+}
+
+static int atmel_mxt_ts_platform_exit(void)
+{
+	gpio_free(ATMEL_MXT_TS_GPIO_IRQ);
+	gpio_tlmm_config(GPIO_CFG(ATMEL_MXT_TS_GPIO_IRQ, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+	gpio_free(ATMEL_MXT_TS_RESET);
+	gpio_tlmm_config(GPIO_CFG(ATMEL_MXT_TS_RESET, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+	regulator_bulk_disable(ARRAY_SIZE(regs_atmet_mxtx), regs_atmet_mxtx);
+	regulator_bulk_free(ARRAY_SIZE(regs_atmel_mxt), regs_atmel_mxt);
+	return 0;
+}
+
+
+
+static struct mxt_platform_data atmel_mxt_ts_pdata = {
+	.irq_gpio = ATMEL_MXT_TS_GPIO_IRQ,
+	.reset_gpio = ATMEL_MXT_TS_RESET,
+	.irqflags = IRQF_TRIGGER_FALLING,
+	.init_platform_hw = atmel_mxt_ts_platform_init,
+	.exit_platform_hw = atmel_mxt_ts_platform_exit,
+};
+
+static struct i2c_board_info atmel_mxt_ts_i2c_info[] __initdata = {
+	{
+		I2C_BOARD_INFO(ATMEL_MXT_TS_I2C_NAME, 0x4a),
+		.platform_data = &atmel_mxt_ts_pdata,
+		.irq = MSM_GPIO_TO_INT(ATMEL_MXT_TS_GPIO_IRQ),
+	},
+};
+/*haowiewie add atmel touch for p864a20 2012-9-26 end */
+//[ECID:000000]zhangqi add mhl begin 20120704
+#ifdef CONFIG_FB_MSM_HDMI_MHL_8334
+#define MHL_GPIO_INT            55
+#define MHL_GPIO_RESET          62
+
+static void mhl_sii_reset_gpio(int on)
+{
+	printk("zhangqi add %s  on =%d \n",__func__,on);
+	gpio_set_value(MHL_GPIO_RESET, on);
+	return;
+}
+
+/*
+ * Request for GPIO allocations
+ * Set appropriate GPIO directions
+ */
+static int mhl_sii_gpio_setup(int on)
+{
+	int ret,rc;
+	static struct regulator *reg_8921_l12;
+
+	printk("zhangqi add %s  on =%d \n",__func__,on);
+
+	if (!reg_8921_l12) {
+		reg_8921_l12 = regulator_get(NULL, "8921_l12");
+		if (IS_ERR(reg_8921_l12)) {
+			pr_err("could not get 8921_l12, rc = %ld\n",
+				PTR_ERR(reg_8921_l12));
+			return -ENODEV;
+		}
+		rc = regulator_set_voltage(reg_8921_l12, 1200000, 1200000);
+		if (rc) {
+			pr_err("set_voltage failed for 8921_l12, rc=%d\n", rc);
+			return -EINVAL;
+		}
+	}
+
+
+
+
+	if (on) {
+
+		rc = regulator_enable(reg_8921_l12);
+		if (rc) {
+			pr_err("'%s' regulator enable failed, rc=%d\n",
+				"reg_8921_l12", rc);
+			return rc;
+		}
+		
+		ret = gpio_request(MHL_GPIO_RESET, "W_RST#");
+		if (ret < 0) {
+			pr_err("GPIO RESET request failed: %d\n", ret);
+			return -EBUSY;
+		}
+		ret = gpio_direction_output(MHL_GPIO_RESET, 1);
+		if (ret < 0) {
+			pr_err("SET GPIO RESET direction failed: %d\n", ret);
+			gpio_free(MHL_GPIO_RESET);
+			return -EBUSY;
+		}
+		ret = gpio_request(MHL_GPIO_INT, "W_INT");
+		if (ret < 0) {
+			pr_err("GPIO INT request failed: %d\n", ret);
+			gpio_free(MHL_GPIO_RESET);
+			return -EBUSY;
+		}
+		ret = gpio_direction_input(MHL_GPIO_INT);
+		if (ret < 0) {
+			pr_err("SET GPIO INTR direction failed: %d\n", ret);
+			gpio_free(MHL_GPIO_RESET);
+			gpio_free(MHL_GPIO_INT);
+			return -EBUSY;
+		}
+	} else {
+		gpio_free(MHL_GPIO_RESET);
+		gpio_free(MHL_GPIO_INT);
+	}
+
+	return 0;
+}
+
+static struct msm_mhl_platform_data mhl_platform_data = {
+	.gpio_setup = mhl_sii_gpio_setup,
+	.reset_pin = mhl_sii_reset_gpio,
+};
+
+
+
+
+#endif
+
+static struct i2c_board_info sii_device_info[] __initdata = {
+#ifdef CONFIG_FB_MSM_HDMI_MHL_8334
+	{
+		/*
+		 * keeps SI 8334 as the default
+		 * MHL TX
+		 */
+		I2C_BOARD_INFO("sii8334_PAGE_TPI", 0x39),
+		.platform_data = &mhl_platform_data,
+		.flags = I2C_CLIENT_WAKE,
+		.irq = MSM_GPIO_TO_INT(55),
+	},
+	{
+	//	I2C_BOARD_INFO("sii8334_PAGE_TX_L0", 0x39),
+	//	.platform_data = &mhl_platform_data,
+	},
+	{
+		I2C_BOARD_INFO("sii8334_PAGE_TX_L1", 0x3d),
+		.platform_data = &mhl_platform_data,
+	},
+	{
+		I2C_BOARD_INFO("sii8334_PAGE_TX_2", 0x49),
+		.platform_data = &mhl_platform_data,
+	},
+	{
+		I2C_BOARD_INFO("sii8334_PAGE_TX_3", 0x4d),
+		.platform_data = &mhl_platform_data,
+	},
+	{
+		I2C_BOARD_INFO("sii8334_PAGE_CBUS", 0x64),
+		.platform_data = &mhl_platform_data,
+	},
+
+#endif
+};
+
+//[ECID:000000]zhangqi add mhl end 20120704
+/*[ECID:000000] ZTEBSP fanjiankang, for sensor, 20120628 begin*/
+#if defined(CONFIG_TAOS_ALS) || defined(CONFIG_TAOS_27723)
+#define TMD2771_IRQ_GPIO  45
+#define AKM8963_IRQ_GPIO  56
+#endif
+
+#ifdef CONFIG_SENSORS_AK8963
+static struct akm8963_platform_data akm_platform_data_8963 = {
+#if defined(CONFIG_PROJECT_P864A10) || defined(CONFIG_PROJECT_P864H01) || defined (CONFIG_PROJECT_P864A20) \
+	|| defined (CONFIG_PROJECT_P864G02)
+	.gpio_DRDY = 134,
+	.gpio_RST = 0,
+	.layout = 5,
+	.outbit = 1,
+#else
+	.gpio_DRDY = 134,
+	.gpio_RST = 0,
+	.layout = 3,
+	.outbit = 1,
+#endif
+};
+#endif
+
+#ifdef  CONFIG_TI_ST_ACC_330D
+struct lsm330dlc_acc_platform_data lsm330d_acc_plt_dat = {
+#if defined(CONFIG_PROJECT_P864A10) || defined(CONFIG_PROJECT_P864H01)
+                .poll_interval = 20,          //Driver polling interval as 50ms
+                .min_interval = 10,    //Driver polling interval minimum 10ms
+                .g_range = LSM330DLC_ACC_G_2G,    //Full Scale of LSM303DLH Accelerometer  
+                .axis_map_x = 1,      //x = y 
+                .axis_map_y = 0,      //y = x 
+                .axis_map_z = 2,      //z = z 
+                .negate_x = 1,      //x = -x 
+                .negate_y = 1,      //y = -y 
+                .negate_z = 0,      //z = +z 
+                .gpio_int1 = -1,
+                .gpio_int2 = -1,
+#elif defined (CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
+                .poll_interval = 20,          //Driver polling interval as 50ms
+                .min_interval = 10,    //Driver polling interval minimum 10ms
+                .g_range = LSM330DLC_ACC_G_2G,    //Full Scale of LSM303DLH Accelerometer  
+                .axis_map_x = 1,      //x = y 
+                .axis_map_y = 0,      //y = x 
+                .axis_map_z = 2,      //z = z 
+                .negate_x = 0,      //x = +x        //yangze a20
+                .negate_y = 0,      //y = +y        //yangze a20
+                .negate_z = 0,      //z = +z 
+                .gpio_int1 = -1,
+                .gpio_int2 = -1,
+#else
+                .poll_interval = 20,          //Driver polling interval as 50ms
+                .min_interval = 10,    //Driver polling interval minimum 10ms
+                .g_range = LSM330DLC_ACC_G_2G,    //Full Scale of LSM303DLH Accelerometer  
+                .axis_map_x = 0,      //x = x 
+                .axis_map_y = 1,      //y = y 
+                .axis_map_z = 2,      //z = z 
+                .negate_x = 0,      //x = +x 
+                .negate_y = 0,      //y = +y 
+                .negate_z = 1,      //z = +z 
+                .gpio_int1 = -1,
+                .gpio_int2 = -1,
+#endif
+}; 
+#endif
+
+#ifdef  CONFIG_TI_ST_GYRO_330D
+struct lsm330dlc_gyr_platform_data lsm330d_gyro_plt_dat = {
+#if defined(CONFIG_PROJECT_P864A10) || defined(CONFIG_PROJECT_P864H01)
+                .fs_range = LSM330DLC_GYR_FS_2000DPS,
+                .axis_map_x = 1,                //x = x
+                .axis_map_y = 0,      //y = y
+                .axis_map_z = 2,      //z = z
+                .negate_x = 1,      //x = +x 
+                .negate_y = 1,      //y = +y 
+                .negate_z = 0,      //z = +z 
+             	   .poll_interval=10,
+       	   .min_interval=10,
+  //     	   .gpio_int1=29,
+ //      	   .gpio_int2=77,
+#elif defined (CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
+                .fs_range = LSM330DLC_GYR_FS_2000DPS,
+                .axis_map_x = 1,                //x = x
+                .axis_map_y = 0,      //y = y
+                .axis_map_z = 2,      //z = z
+                .negate_x = 0,      //x = +x 
+                .negate_y = 0,      //y = +y 
+                .negate_z = 0,      //z = +z 
+             	   .poll_interval=10,
+       	   .min_interval=10,
+  //     	   .gpio_int1=29,
+ //      	   .gpio_int2=77,
+#else
+                .fs_range = LSM330DLC_GYR_FS_2000DPS,
+                .axis_map_x = 0,                //x = x
+                .axis_map_y = 1,      //y = y
+                .axis_map_z = 2,      //z = z
+                .negate_x = 0,      //x = +x 
+                .negate_y = 0,      //y = +y 
+                .negate_z = 1,      //z = +z 
+             	   .poll_interval=10,
+       	   .min_interval=10,
+  //     	   .gpio_int1=29,
+ //      	   .gpio_int2=77,
+#endif
+};
+#endif
+
+static struct i2c_board_info  sensor_i2c0_boardinfo[] __initdata ={
+#if 0
+#ifdef CONFIG_TAOS_ALS
+        {   
+                I2C_BOARD_INFO("taos", 0x39),
+                .irq = MSM_GPIO_TO_INT(TMD2771_IRQ_GPIO),
+        },  
+#endif
+#endif
+
+#ifdef CONFIG_TI_ST_ACC_330D
+  {
+     I2C_BOARD_INFO("lsm330dlc_acc", 0x19),      
+    .platform_data = (void *)&lsm330d_acc_plt_dat,
+  },
+#endif
+#ifdef CONFIG_TI_ST_GYRO_330D
+
+  {
+     I2C_BOARD_INFO("lsm330dlc_gyr", 0x6a),
+    .platform_data = (void *)&lsm330d_gyro_plt_dat,
+  },
+#endif
+
+#ifdef CONFIG_SENSORS_AK8963
+  {
+	I2C_BOARD_INFO("akm8963", 0x0C),
+//	.flags = I2C_CLIENT_WAKE,
+	.platform_data = &akm_platform_data_8963,
+	.irq = MSM_GPIO_TO_INT(56),
+  }
+#endif
+};
+#if defined(CONFIG_TAOS_ALS) || defined(CONFIG_TAOS_27723)
+static int taos_gpio_config(void)
+{
+       int rc = 0;
+     	/* configure taos interrupt gpio */
+	rc = gpio_request(TMD2771_IRQ_GPIO, "taos_gpio");
+	if (rc) {
+                printk("taos error gpio request\n");
+	}
+
+	rc = gpio_tlmm_config(GPIO_CFG(TMD2771_IRQ_GPIO, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_PULL_UP,
+				GPIO_CFG_14MA), GPIO_CFG_ENABLE);
+	if (rc) {
+                printk("taos error gpio config\n");
+	}
+
+	rc = gpio_request(AKM8963_IRQ_GPIO, "akm_gpio");
+	if (rc) {
+                printk("akm error gpio request\n");
+	}
+
+	rc = gpio_tlmm_config(GPIO_CFG(AKM8963_IRQ_GPIO, 0,
+				GPIO_CFG_INPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_14MA), GPIO_CFG_ENABLE);
+	if (rc) {
+                printk("akm error gpio config\n");
+	}
+
+
+	return rc;
+
+}
+#if defined(CONFIG_TAOS_27723) || defined(CONFIG_TAOS_ALS)
+static struct i2c_board_info  taos_i2c_boardinfo[] __initdata ={
+        {   
+              	I2C_BOARD_INFO("taos", 0x39),
+                .irq = MSM_GPIO_TO_INT(TMD2771_IRQ_GPIO),
+             // .platform_data	= &tsl2772_data,
+        },
+};
+#endif 
+
+#endif
+#if defined(CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02)
+//added by fanjiankang begin
+static int morata_gpio_config(void)
+{
+       int rc = 0;
+	printk("morata gpio config\n");
+     	/* configure taos interrupt gpio */
+	rc = gpio_request(34, "morata_gpio");
+	if (rc) {
+                printk("morata error gpio request\n");
+	}
+
+#if 0
+	rc = gpio_tlmm_config(GPIO_CFG(34, 0,
+				GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL,
+				GPIO_CFG_14MA), GPIO_CFG_ENABLE);
+	if (rc) {
+                printk("morata error gpio config\n");
+	}
+#endif
+	rc = gpio_direction_output(34, 1);
+	if (rc) {
+		pr_err("%s: unable to set_direction for MORATA gpio\n",
+				__func__);
+	}
+
+	return rc;
+
+}
+//added by fanjiankang end
+#endif
+static int sensor_power_init(int on)
+{
+	static struct regulator *reg_8921_l9, *reg_8921_lvs4;
+	static int prev_on=0;
+	int rc;
+
+       printk("fanjiankang goes to sensor_power_init\n");
+	if (on == prev_on)
+		return 0;
+       
+
+	if (!reg_8921_l9) {
+		reg_8921_l9 = regulator_get(NULL, "8921_l9");
+		if (IS_ERR(reg_8921_l9)) {
+			pr_err("could not get reg_8921_l9, rc = %ld\n",
+				PTR_ERR(reg_8921_l9));
+			return -ENODEV;
+		}
+		rc = regulator_set_voltage(reg_8921_l9, 3000000, 3000000);
+		if (rc) {
+			pr_err("set_voltage failed for reg_8921_l9, rc=%d\n", rc);
+			return -EINVAL;
+		}
+	}
+
+	if (!reg_8921_lvs4) {
+		reg_8921_lvs4 = regulator_get(NULL, "8921_lvs4");
+		if (IS_ERR(reg_8921_lvs4)) {
+			pr_err("could not get reg_8921_lvs4, rc = %ld\n",
+				PTR_ERR(reg_8921_lvs4));
+			return -ENODEV;
+		}
+	}
+
+       printk("fanjiankang can go here sensor:\n");
+	if (on) {
+
+		rc = regulator_enable(reg_8921_l9);
+		if (rc) {
+			pr_err("'%s' regulator enable failed, rc=%d\n",
+				"reg_8921_l9", rc);
+			return rc;
+		}
+		rc = regulator_enable(reg_8921_lvs4);
+		if (rc) {
+			pr_err("'%s' regulator enable failed, rc=%d\n",
+				"reg_8921_lvs4", rc);
+			return rc;
+		}
+		
+	} else {
+
+		rc = regulator_disable(reg_8921_l9);
+		if (rc) {
+			pr_err("disable reg_8921_l9 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+		rc = regulator_disable(reg_8921_lvs4);
+		if (rc) {
+			pr_err("disable reg_8921_lvs4 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+	}
+
+	prev_on = on;
+
+	return rc;
+}
+/*[ECID:000000] ZTEBSP fanjiankang, for sensor, 20120628 end*/
+
 #define MSM_WCNSS_PHYS	0x03000000
 #define MSM_WCNSS_SIZE	0x280000
 
@@ -2679,7 +3588,7 @@ static int rf4ce_gpio_init(void)
 	return 0;
 }
 late_initcall(rf4ce_gpio_init);
-
+/*
 #ifdef CONFIG_SERIAL_MSM_HS
 static struct msm_serial_hs_platform_data mpq8064_gsbi6_uartdm_pdata = {
 	.config_gpio		= 4,
@@ -2693,7 +3602,7 @@ static struct msm_serial_hs_platform_data mpq8064_gsbi6_uartdm_pdata = {
 #else
 static struct msm_serial_hs_platform_data msm_uart_dm9_pdata;
 #endif
-
+*/
 static struct platform_device *mpq_devices[] __initdata = {
 	&msm_device_sps_apq8064,
 	&mpq8064_device_qup_i2c_gsbi5,
@@ -3053,6 +3962,120 @@ static struct platform_device mpq_keypad_device = {
 	},
 };
 
+#ifdef CONFIG_PN544_NFC
+#define ZTE_GPIO_PN544_IRQ 29
+#define ZTE_GPIO_PN544_VEN_EN 31
+#define ZTE_GPIO_PN544_FIRM 43
+
+static struct pn544_i2c_platform_data pn544_data = {
+	.irq_gpio = ZTE_GPIO_PN544_IRQ,
+	.ven_gpio = ZTE_GPIO_PN544_VEN_EN,
+	.firm_gpio = ZTE_GPIO_PN544_FIRM,
+};
+
+static struct i2c_board_info __initdata pn544_device_info[] = {
+	{
+		I2C_BOARD_INFO("pn544", 0x28),
+		.irq = MSM_GPIO_TO_INT(ZTE_GPIO_PN544_IRQ),
+		.platform_data = &pn544_data,
+	},
+};
+static void nfc_init(void)
+{
+	gpio_tlmm_config(GPIO_CFG(pn544_data.irq_gpio, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	gpio_tlmm_config(GPIO_CFG(pn544_data.ven_gpio, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	gpio_tlmm_config(GPIO_CFG(pn544_data.firm_gpio, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+}
+#endif
+
+/*[ECID:000000] ZTEBSP jiaobaocun, for externel FM, 20120929 start*/
+#if defined(CONFIG_I2C_SI470X) || defined(CONFIG_I2C_SI470X_MODULE)
+#define ZTE_GPIO_SI470X_IRQ 22
+#define ZTE_GPIO_SI470X_RESET 28
+#define SI470X_CLK			PM8921_GPIO_PM_TO_SYS(43)
+
+static int si470x_clk_enable(bool on)
+{
+	int rc = 0;
+	printk("jiaobaocun si470x_clk_enable\n");
+	gpio_set_value_cansleep(SI470X_CLK, on);
+
+	if (on) {
+		rc = pm8xxx_aux_clk_control(CLK_MP3_1, XO_DIV_32, true);
+		if (rc) {
+			pr_err("%s: unable to write aux clock register(%d)\n",
+				__func__, rc);
+			goto err_gpio_dis;
+		}
+	} else {
+		rc = pm8xxx_aux_clk_control(CLK_MP3_1, XO_DIV_NONE, true);
+		if (rc)
+			pr_err("%s: unable to write aux clock register(%d)\n",
+				__func__, rc);
+	}
+
+	return rc;
+
+err_gpio_dis:
+	gpio_set_value_cansleep(SI470X_CLK, !on);
+	return rc;
+}
+
+static int si470x_power(bool on)
+{
+	int rc = 0;
+	static struct regulator *fm_regulator;
+	/*gpio config*/
+	printk("jiaobaocun si470x_power\n");
+	/* Voting for 1.8V Regulator to enable fm rf power*/
+	fm_regulator = regulator_get(NULL , "8921_lvs5");
+	if (IS_ERR(fm_regulator)) {
+		rc = PTR_ERR(fm_regulator);
+		pr_err("%s: could not get regulator: %d\n", __func__, rc);
+	}
+	else{
+		pr_err("%s: get regulator ok\n", __func__);
+		}
+	/* Enabling the 1.8V regulator */
+	rc = regulator_enable(fm_regulator);
+	if (rc) {		
+		regulator_put(fm_regulator);
+		fm_regulator = NULL;
+		pr_err("%s: could not enable regulator: %d\n", __func__, rc);
+	}
+	else
+		{
+		pr_err("%s: fm  power switch has enabled!\n",__func__);
+	}
+	
+	return rc;
+	
+}	
+
+static struct radio_si470x_platform_data si470x_pdata = {
+	.reset_pin = ZTE_GPIO_SI470X_RESET,
+	.power_on = si470x_power,
+	.clk_enable = si470x_clk_enable,
+};
+
+
+static struct i2c_board_info __initdata si470x_device_info[] = {
+	{
+		I2C_BOARD_INFO("si470x", 0x10),
+		.irq = MSM_GPIO_TO_INT(ZTE_GPIO_SI470X_IRQ),
+		.platform_data = &si470x_pdata,
+	},
+};
+static void si470x_init(void)
+{
+	printk("jiaobaocun si470x_init\n");
+	/*gpio config*/
+	gpio_tlmm_config(GPIO_CFG(ZTE_GPIO_SI470X_IRQ, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	gpio_tlmm_config(GPIO_CFG(ZTE_GPIO_SI470X_RESET, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+}	
+#endif
+/*[ECID:000000] ZTEBSP jiaobaocun, for externel FM, 20120929 end*/
+
 /* Sensors DSPS platform data */
 #define DSPS_PIL_GENERIC_NAME		"dsps"
 static void __init apq8064_init_dsps(void)
@@ -3089,30 +4112,116 @@ static struct i2c_registry apq8064_i2c_devices[] __initdata = {
 		smb349_charger_i2c_info,
 		ARRAY_SIZE(smb349_charger_i2c_info)
 	},
+	{////zhangzhao added synaptics for 865a10 2012-8-23
+		I2C_SURF | I2C_LIQUID|I2C_FFA,
+		APQ_8064_GSBI3_QUP_I2C_BUS_ID,
+		synaptics_ts_i2c_info,
+		ARRAY_SIZE(synaptics_ts_i2c_info),
+	},
+/*[ECID:000000] ZTEBSP haoweiwei, for p864a20 touchscreen_atmel, 20120924*/
+	{
+		I2C_SURF | I2C_LIQUID|I2C_FFA,
+		APQ_8064_GSBI3_QUP_I2C_BUS_ID,
+		atmel_mxt_ts_i2c_info,
+		ARRAY_SIZE(atmel_mxt_ts_i2c_info),
+	},	
+/*[ECID:000000] ZTEBSP haoweiwei, for p864a20 touchscreen_atmel, 20120924*/
+
+/*[ECID:000000] ZTEBSP shihuiqin, for touchscreen_mxt224, 20120216*/
 	{
 		I2C_SURF | I2C_LIQUID,
 		APQ_8064_GSBI3_QUP_I2C_BUS_ID,
 		mxt_device_info,
 		ARRAY_SIZE(mxt_device_info),
 	},
+#if 1
+	{
+		I2C_FFA,
+		APQ_8064_GSBI3_QUP_I2C_BUS_ID,
+		atmel_ts_i2c_info,
+		ARRAY_SIZE(atmel_ts_i2c_info),
+	},	
+/*[ECID:000000] ZTEBSP shihuiqin, for touchscreen_mxt224, 20120216*/
+#endif
+/*[ECID:000000] ZTEBSP zhangqi, for mhl, 20120628*/
+	{
+		I2C_SURF | I2C_FFA | I2C_LIQUID,
+		APQ_8064_GSBI1_QUP_I2C_BUS_ID,
+		sii_device_info,
+		ARRAY_SIZE(sii_device_info),
+	},
+/*[ECID:000000] ZTEBSP zhangqi, for mhl, 20120628*/
+
+/*[ECID:000000] ZTEBSP doumingming for vibrator, 20120814 start*/
+	{
+		I2C_SURF | I2C_FFA | I2C_LIQUID,
+		APQ_8064_GSBI5_QUP_I2C_BUS_ID,
+		isa1200_board_info,
+		ARRAY_SIZE(isa1200_board_info),
+	},
+/*[ECID:000000] ZTEBSP doumingming for vibrator, 20120814 end*/
+/*[ECID:000000] ZTEBSP fanjiankang, for sensor, 20120628*/
+	{
+           I2C_FFA,
+            APQ_8064_GSBI2_QUP_I2C_BUS_ID,
+ 	    sensor_i2c0_boardinfo,
+	    ARRAY_SIZE(sensor_i2c0_boardinfo),
+
+	},
+#if defined(CONFIG_PROJECT_P864A20) ||defined(CONFIG_PROJECT_P864G02)
+	{
+      I2C_FFA,
+      APQ_8064_GSBI5_QUP_I2C_BUS_ID,
+ 	    taos_i2c_boardinfo,
+	    ARRAY_SIZE(taos_i2c_boardinfo),	
+	},
+#else
+	{
+      I2C_FFA,
+      APQ_8064_GSBI2_QUP_I2C_BUS_ID,
+ 	    taos_i2c_boardinfo,
+	    ARRAY_SIZE(taos_i2c_boardinfo),	
+	},
+#endif	
+/*[ECID:000000] ZTEBSP fanjiankang, for sensor, 20120628*/
 	{
 		I2C_FFA,
 		APQ_8064_GSBI3_QUP_I2C_BUS_ID,
 		cyttsp_info,
 		ARRAY_SIZE(cyttsp_info),
 	},
+/*[ECID:000000] ZTEBSP doumingming for vibrator, 20120814 start*/
 	{
 		I2C_FFA | I2C_LIQUID,
-		APQ_8064_GSBI1_QUP_I2C_BUS_ID,
+		APQ_8064_GSBI2_QUP_I2C_BUS_ID,
 		isa1200_board_info,
 		ARRAY_SIZE(isa1200_board_info),
 	},
+/*[ECID:000000] ZTEBSP doumingming for vibrator, 20120814 end*/
 	{
 		I2C_MPQ_CDP,
 		APQ_8064_GSBI5_QUP_I2C_BUS_ID,
 		cs8427_device_info,
 		ARRAY_SIZE(cs8427_device_info),
 	},
+/*[ECID:000000] ZTEBSP jiaobaocun, for externel FM, 20120929 start*/
+#if defined(CONFIG_I2C_SI470X) || defined(CONFIG_I2C_SI470X_MODULE)
+	{
+		I2C_SURF | I2C_FFA | I2C_LIQUID,
+		APQ_8064_GSBI5_QUP_I2C_BUS_ID,
+		si470x_device_info,
+		ARRAY_SIZE(si470x_device_info),
+	},
+#endif
+/*[ECID:000000] ZTEBSP jiaobaocun, for externel FM, 20120929 end*/
+#ifdef CONFIG_PN544_NFC
+	{
+		I2C_SURF | I2C_FFA | I2C_LIQUID,
+		APQ_8064_GSBI1_QUP_I2C_BUS_ID,
+		pn544_device_info,
+		ARRAY_SIZE(pn544_device_info),
+	},
+#endif
 };
 
 #define SX150X_EXP1_INT_N	PM8921_MPP_IRQ(PM8921_IRQ_BASE, 9)
@@ -3209,6 +4318,10 @@ static void __init register_i2c_devices(void)
 		mach_mask = I2C_FFA;
 	else if (machine_is_apq8064_liquid())
 		mach_mask = I2C_LIQUID;
+	else if (machine_is_apq8064_rumi3())
+		mach_mask = I2C_RUMI;
+	else if (machine_is_apq8064_sim())
+		mach_mask = I2C_SIM;
 	else if (PLATFORM_IS_MPQ8064())
 		mach_mask = I2C_MPQ_CDP;
 	else
@@ -3240,6 +4353,14 @@ static void __init register_i2c_devices(void)
 					mpq8064_i2c_devices[i].info,
 					mpq8064_i2c_devices[i].len);
 	}
+/*[ECID:000000] ZTEBSP jiaobaocun, for externel FM, 20120929 start*/
+#if defined(CONFIG_I2C_SI470X) || defined(CONFIG_I2C_SI470X_MODULE)
+	si470x_init();
+#endif
+/*[ECID:000000] ZTEBSP jiaobaocun, for externel FM, 20120929 end*/
+#ifdef CONFIG_PN544_NFC
+	nfc_init();
+#endif
 }
 
 static void enable_avc_i2c_bus(void)
@@ -3261,7 +4382,7 @@ static void __init apq8064_pm8917_pdata_fixup(void)
 	cdp_keys_data.buttons = cdp_keys_pm8917;
 	cdp_keys_data.nbuttons = ARRAY_SIZE(cdp_keys_pm8917);
 }
-
+/*
 #ifdef CONFIG_SERIAL_MSM_HS
 static struct msm_serial_hs_platform_data apq8064_uartdm_gsbi4_pdata = {
 	.config_gpio	= 4,
@@ -3273,7 +4394,7 @@ static struct msm_serial_hs_platform_data apq8064_uartdm_gsbi4_pdata = {
 #else
 static struct msm_serial_hs_platform_data apq8064_uartdm_gsbi4_pdata;
 #endif
-
+*/
 static void __init apq8064ab_update_retention_spm(void)
 {
 	int i;
@@ -3324,11 +4445,26 @@ static void __init apq8064_common_init(void)
 		pr_err("Failed to initialize XO votes\n");
 	msm_clock_init(&apq8064_clock_init_data);
 	apq8064_init_gpiomux();
+    sensor_power_init(1);    //added by fanjiankang
 	apq8064_i2c_init();
+
+	//added by fanjiankang for morata change
+	#if defined(CONFIG_PROJECT_P864A20) ||defined(CONFIG_PROJECT_P864G02)
+    morata_gpio_config();
+  #endif
+
+	//added by fanjiankang for taos gpio config
+#if defined(CONFIG_TAOS_ALS) || defined(CONFIG_TAOS_27723)
+	taos_gpio_config();
+      #endif
 	register_i2c_devices();
 
+/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 start*/
+#ifndef SPI_SW_CONTROL   /*SPI_HW_CONTROL*/
 	apq8064_device_qup_spi_gsbi5.dev.platform_data =
 						&apq8064_qup_spi_gsbi5_pdata;
+#endif
+
 	apq8064_init_pmic();
 	if (machine_is_apq8064_liquid())
 		msm_otg_pdata.mhl_enable = true;
@@ -3398,10 +4534,10 @@ static void __init apq8064_common_init(void)
 			platform_device_register(&sglte2_qsc_8064_device);
 
 			/* GSBI4 UART device for Primay IPC */
-			apq8064_uartdm_gsbi4_pdata.wakeup_irq = gpio_to_irq(11);
-			apq8064_device_uartdm_gsbi4.dev.platform_data =
-						&apq8064_uartdm_gsbi4_pdata;
-			platform_device_register(&apq8064_device_uartdm_gsbi4);
+			//apq8064_uartdm_gsbi4_pdata.wakeup_irq = gpio_to_irq(11);
+			//apq8064_device_uartdm_gsbi4.dev.platform_data =
+			//			&apq8064_uartdm_gsbi4_pdata;
+			//platform_device_register(&apq8064_device_uartdm_gsbi4);
 		} else if (SOCINFO_VERSION_MINOR(platform_version) == 1) {
 			i2s_mdm_8064_device.dev.platform_data =
 				&mdm_platform_data;
@@ -3454,17 +4590,16 @@ static void __init apq8064_cdp_init(void)
 #ifdef CONFIG_MSM_CAMERA
 	apq8064_init_cam();
 #endif
-
+/*
 	if (machine_is_mpq8064_hrd() || machine_is_mpq8064_dtv()) {
 #ifdef CONFIG_SERIAL_MSM_HS
-		/* GSBI6(2) - UARTDM_RX */
 		mpq8064_gsbi6_uartdm_pdata.wakeup_irq = gpio_to_irq(15);
 		mpq8064_device_uartdm_gsbi6.dev.platform_data =
 					&mpq8064_gsbi6_uartdm_pdata;
 #endif
 		platform_device_register(&mpq8064_device_uartdm_gsbi6);
 	}
-
+*/
 	if (machine_is_apq8064_cdp() || machine_is_apq8064_liquid())
 		platform_device_register(&cdp_kp_pdev);
 

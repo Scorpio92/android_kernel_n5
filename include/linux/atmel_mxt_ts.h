@@ -64,9 +64,11 @@ struct mxt_platform_data {
 	u32 disp_maxx;
 	u32 disp_miny;
 	u32 disp_maxy;
-	/*haoweiwei add*/
-   int	(*init_platform_hw)(struct i2c_client *client);
-        int    (*exit_platform_hw)(void);
+	/*haoweiwie add*/
+//    int    (*init_platform_hw)(struct i2c_client *client);
+//    int    (*exit_platform_hw)(struct i2c_client *client);
+    int	(*init_platform_hw)(struct i2c_client *client);
+    int    (*exit_platform_hw)(void);
 	unsigned long irqflags;
 	bool	i2c_pull_up;
 	bool	digital_pwr_regulator;

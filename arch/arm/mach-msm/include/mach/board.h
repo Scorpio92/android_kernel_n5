@@ -502,6 +502,14 @@ struct msm_hdmi_platform_data {
 	bool is_mhl_enabled;
 };
 
+/*[ECID:000000] ZTEBSP wangbing, for mhl driver 20120906 */
+#if 1
+struct msm_mhl_platform_data {
+	int irq;
+	int (*gpio_setup)(int on);
+	void (*reset_pin)(int on);
+};
+#else
 struct msm_mhl_platform_data {
 	int irq;
 	/* GPIO no. for mhl intr */
@@ -516,15 +524,8 @@ struct msm_mhl_platform_data {
 	uint32_t gpio_mhl_power;
 	/* GPIO no. for hdmi-mhl mux */
 	uint32_t gpio_hdmi_mhl_mux;
-	bool mhl_enabled;
-/*added by congshan 20121008 start*/
-#ifdef CONFIG_ZTEMT_MHL_8064
-	void (*reset)(void);
-	void (*gpio_input)(void);
-	int (*mhl_power)(int on);
-#endif
-/*added by congshan 20121008 end*/
 };
+#endif
 
 struct msm_i2c_platform_data {
 	int clk_freq;
