@@ -47,6 +47,10 @@
 
 #define SCM_IO_DISABLE_PMIC_ARBITER	1
 
+//[ECID:0000]ZTE_BSP maxiaoping 20121121 modify PLATFORM 8064 RTC alarm  for power_off charging,start.
+#define POWER_OFF_CHARGE_ALARM_MODE   0x77665508
+//[ECID:0000]ZTE_BSP maxiaoping 20121121 modify PLATFORM 8064 RTC alarm  for power_off charging,end.
+
 #ifdef CONFIG_LGE_CRASH_HANDLER
 #define LGE_ERROR_HANDLER_MAGIC_NUM	0xA97F2C46
 #define LGE_ERROR_HANDLER_MAGIC_ADDR	0x18
@@ -66,7 +70,7 @@ static void *dload_mode_addr;
 
 /* Download mode master kill-switch */
 static int dload_set(const char *val, struct kernel_param *kp);
-static int download_mode = 1;
+static int download_mode = 0; //[ECID:000000] ZTEBSP wanghaifei 20130227, disable download if watchdog timeout
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
 
@@ -248,7 +252,7 @@ void msm_restart(char mode, const char *cmd)
 	set_dload_mode(0);
 
 	/* Write download mode flags if we're panic'ing */
-	set_dload_mode(in_panic);
+//	set_dload_mode(in_panic); //[ECID:000000] ZTEBSP wanghaifei 20121129, disable download mode if panic
 
 	/* Write download mode flags if restart_mode says so */
 	if (restart_mode == RESTART_DLOAD) {
@@ -260,8 +264,12 @@ void msm_restart(char mode, const char *cmd)
 	}
 
 	/* Kill download mode if master-kill switch is set */
+//[ECID:000000] ZTEBSP wanghaifei 20130227, disable download if watchdog timeout 
+#if 0
 	if (!download_mode)
 		set_dload_mode(0);
+#endif
+//[ECID:000000] ZTEBSP wanghaifei 20130227, disable download if watchdog timeout 
 #endif
 
 	printk(KERN_NOTICE "Going down for restart now\n");
@@ -276,18 +284,30 @@ void msm_restart(char mode, const char *cmd)
 		} else if (!strncmp(cmd, "oem-", 4)) {
 			unsigned long code;
 			code = simple_strtoul(cmd + 4, NULL, 16) & 0xff;
-			__raw_writel(0x6f656d00 | code, restart_reason);
-		} else {
+			__raw_writel(0x6f656d00 | code, restart_reason);			
+/*ZTEBSP wangbing, for poweroff charge, 20120912 +++*/
+		} else if (!strncmp(cmd, "boot_no_charge", 14)) {
+			__raw_writel(0x77665509, restart_reason);
+/*ZTEBSP wangbing, for poweroff charge, 20120912 --*/
+		/* ZTEBSP yuanjinxing 20121009, add FTM reboot reason, start */
+		} else if(!strncmp(cmd, "ftmmode", 7)) {
+		    __raw_writel(0x77665504, restart_reason);
+		/* ZTEBSP yuanjinxing 20121009, add FTM reboot reason, end */	
+		 //[ECID:0000]ZTE_BSP maxiaoping 20121121 modify PLATFORM 8064 RTC alarm  for power_off charging,start.
+		} else if (!strncmp(cmd, "rtcalarm", 8)) {
+			__raw_writel(POWER_OFF_CHARGE_ALARM_MODE, restart_reason);
+		}
+		//[ECID:0000]ZTE_BSP maxiaoping 20121121 modify PLATFORM 8064 RTC alarm  for power_off charging,end.
+		else {
 			__raw_writel(0x77665501, restart_reason);
 		}
-	} else {
-		__raw_writel(0x77665501, restart_reason);
 	}
-#ifdef CONFIG_LGE_CRASH_HANDLER
-	if (in_panic == 1)
-		set_kernel_crash_magic_number();
-reset:
-#endif /* CONFIG_LGE_CRASH_HANDLER */
+	//ZUOYANQIANG 20130111 FOR ÖØÆôœøÈë¹Ø»ú³äµçµÄÎÊÌâ£¬BEGIN
+	else
+	{
+		__raw_writel(0x776655aa, restart_reason);
+	}
+	//ZUOYANQIANG 20130111 FOR ÖØÆôœøÈë¹Ø»ú³äµçµÄÎÊÌâ£¬END
 
 	__raw_writel(0, msm_tmr0_base + WDT0_EN);
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {

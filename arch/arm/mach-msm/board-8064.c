@@ -3368,7 +3368,7 @@ static struct platform_device apq8064_device_rpm_regulator __devinitdata = {
 		.platform_data = &apq8064_rpm_regulator_pdata,
 	},
 };
-
+/*
 static struct platform_device
 apq8064_pm8921_device_rpm_regulator __devinitdata = {
 	.name	= "rpm-regulator",
@@ -3377,7 +3377,7 @@ apq8064_pm8921_device_rpm_regulator __devinitdata = {
 		.platform_data = &apq8064_rpm_regulator_pm8921_pdata,
 	},
 };
-
+*/
 static struct gpio_ir_recv_platform_data gpio_ir_recv_pdata = {
 	.gpio_nr = 88,
 	.active_low = 1,
@@ -4557,11 +4557,11 @@ static void __init apq8064_common_init(void)
 	BUG_ON(msm_rpm_init(&apq8064_rpm_data));
 	BUG_ON(msm_rpmrs_levels_init(&msm_rpmrs_data));
 	regulator_suppress_info_printing();
-	if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
-		configure_apq8064_pm8917_power_grid();
+	//if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
+	//	configure_apq8064_pm8917_power_grid();
 	platform_device_register(&apq8064_device_rpm_regulator);
-	if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917)
-		platform_device_register(&apq8064_pm8921_device_rpm_regulator);
+	//if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917)
+	//	platform_device_register(&apq8064_pm8921_device_rpm_regulator);
 	if (msm_xo_init())
 		pr_err("Failed to initialize XO votes\n");
 	msm_clock_init(&apq8064_clock_init_data);

@@ -50,7 +50,7 @@ static void smsm_state_cb_hdlr(void *data, uint32_t old_state,
 
 	pr_err("%s: smsm state changed\n", MODULE_NAME);
 
-	wcnss_riva_dump_pmic_regs();
+	//wcnss_riva_dump_pmic_regs();
 
 	if (!(new_state & SMSM_RESET))
 		return;
@@ -132,7 +132,7 @@ static int riva_shutdown(const struct subsys_desc *subsys)
 {
 	pil_force_shutdown("wcnss");
 	flush_delayed_work(&cancel_vote_work);
-	wcnss_flush_delayed_boot_votes();
+	//wcnss_flush_delayed_boot_votes();
 	disable_irq_nosync(RIVA_APSS_WDOG_BITE_RESET_RDY_IRQ);
 
 	return 0;
@@ -144,7 +144,7 @@ static int riva_powerup(const struct subsys_desc *subsys)
 	struct wcnss_wlan_config *pwlanconfig = wcnss_get_wlan_config();
 	int    ret = -1;
 
-	wcnss_ssr_boot_notify();
+	//wcnss_ssr_boot_notify();
 
 	if (pdev && pwlanconfig)
 		ret = wcnss_wlan_power(&pdev->dev, pwlanconfig,

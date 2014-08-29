@@ -13,7 +13,16 @@ obj-$(CONFIG_TOUCHSCREEN_AD7879_I2C)	+= ad7879-i2c.o
 obj-$(CONFIG_TOUCHSCREEN_AD7879_SPI)	+= ad7879-spi.o
 obj-$(CONFIG_TOUCHSCREEN_ADS7846)	+= ads7846.o
 obj-$(CONFIG_TOUCHSCREEN_ATMEL_MAXTOUCH)	+= atmel_maxtouch.o
-obj-$(CONFIG_TOUCHSCREEN_ATMEL_MXT)	+= atmel_mxt_ts.o
+#/*[ECID:000000] ZTEBSP shihuiqin, for touchscreen_mxt224, 20120216 start*/
+#obj-$(CONFIG_TOUCHSCREEN_ATMEL_MXT)	+= atmel_mxt_ts.o
+#obj-$(CONFIG_TOUCHSCREEN_ATMEL_MXT)	+= atmel_ts.o
+ifeq ($(CONFIG_PROJECT_P864A10),y)
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_2202)	+= synaptics_i2c_rmi_2202.o
+endif
+ifeq ($(CONFIG_PROJECT_P864H01),y)
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_2202)	+= synaptics_i2c_rmi_2202.o
+endif
+#/*[ECID:000000] ZTEBSP shihuiqin, for touchscreen_mxt224, 20120216 end*/
 obj-$(CONFIG_TOUCHSCREEN_ATMEL_TSADCC)	+= atmel_tsadcc.o
 obj-$(CONFIG_TOUCHSCREEN_AUO_PIXCIR)	+= auo-pixcir-ts.o
 obj-$(CONFIG_TOUCHSCREEN_BITSY)		+= h3600_ts_input.o
@@ -89,6 +98,13 @@ obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE) 	+= synaptics_fw_update.o
 obj-$(CONFIG_ZTEMT_TOUCHSCREEN_SYNAPTICS_DSX) += synaptics_dsx/
 obj-$(CONFIG_ZTE_TOUCHSCREEN)	+= zte_touch/
 obj-$(CONFIG_CYPRSS_TOUCHSCREEN_TMA463)	+= cypress/
-ifeq ($(CONFIG_PROJECT_P864H01),y)
-obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_2202)	+= synaptics_i2c_rmi_2202.o
+#/*[ECID:000000] ZTEBSP haoweiwei, add atmel_mxt_ts for p864a20, 20121029 start*/
+ifeq ($(CONFIG_PROJECT_P864A20),y)
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_2202)	+= synaptics_i2c_rmi_3203.o
+obj-$(CONFIG_TOUCHSCREEN_ATMEL_MXT)	+= atmel_mxt_ts.o
 endif
+ifeq ($(CONFIG_PROJECT_P864G02),y)
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_2202)	+= synaptics_i2c_rmi_3203.o
+obj-$(CONFIG_TOUCHSCREEN_ATMEL_MXT)	+= atmel_mxt_ts.o
+endif
+#/*[ECID:000000] ZTEBSP haoweiwei, add atmel_mxt_ts for p864a20, 20121029 end*/

@@ -1553,7 +1553,9 @@ struct mass_storage_function_config {
 	struct fsg_config fsg;
 	struct fsg_common *common;
 };
-
+//[ECID:000000] ZTEBSP zhoufan for cdrom 20121009 start
+static struct mass_storage_function_config *mass_storage_config;
+//[ECID:000000] ZTEBSP zhoufan for cdrom 20121009 end
 static int mass_storage_function_init(struct android_usb_function *f,
 					struct usb_composite_dev *cdev)
 {
@@ -1573,32 +1575,27 @@ static int mass_storage_function_init(struct android_usb_function *f,
 		return -ENOMEM;
 
 
-	config->fsg.nluns = 1;
-	name[0] = "lun";
-#ifdef CONFIG_ZTEMT_CDROM_AUTORUN
-dev->pdata->cdrom = 1;
-#endif
-	if (dev->pdata && dev->pdata->cdrom) {
-#ifdef CONFIG_ZTEMT_TWO_STOR_LUN
-	config->fsg.nluns = 3;
-	config->fsg.luns[1].cdrom = 0;
-	config->fsg.luns[2].cdrom = 1;
-	config->fsg.luns[1].ro = 0;
-	config->fsg.luns[2].ro = 1;
-	config->fsg.luns[1].removable = 1;
-	config->fsg.luns[2].removable = 1;
-	name[1] = "lun1";
-	name[2] = "lun0";
-#else
-		config->fsg.nluns = 2;
+//[ECID:000000] ZTEBSP zhoufan for 2u disk 20121008 ++
+  config->fsg.nluns = 2;
+	name[0] = "lun0";
+    name[1] = "lun1";
+//[ECID:000000] ZTEBSP zhoufan for 2u disk 20121008 --
+	if (dev->pdata->cdrom) {
+//[ECID:000000] ZTEBSP zhoufan for 2u disk 20121008 --
+		/*config->fsg.nluns = 2;
 		config->fsg.luns[1].cdrom = 1;
 		config->fsg.luns[1].ro = 1;
 		config->fsg.luns[1].removable = 1;
-		name[1] = "lun0";
-#endif
+		name[1] = "lun0";*/
+//[ECID:000000] ZTEBSP zhoufan for 2u disk 20121008 --
 	}
-
-	config->fsg.luns[0].removable = 1;
+//[ECID:000000] ZTEBSP zhoufan for 2u disk 20121008 start
+//	 config->fsg.luns[0].removable = 1;
+	 config->fsg.luns[0].removable = 1;
+	 config->fsg.luns[0].nofua = 1;
+	 config->fsg.luns[1].removable = 1; 
+	 config->fsg.luns[1].nofua = 1;
+//[ECID:000000] ZTEBSP zhoufan for 2u disk 20121008 end
 
 	common = fsg_common_init(NULL, cdev, &config->fsg);
 	if (IS_ERR(common)) {
@@ -1616,6 +1613,9 @@ dev->pdata->cdrom = 1;
 
 	config->common = common;
 	f->config = config;
+//[ECID:000000] ZTEBSP zhoufan for cdrom 20121009 start
+	mass_storage_config = config;
+//[ECID:000000] ZTEBSP zhoufan for cdrom 20121009 end
 	return 0;
 error:
 	for (; i > 0 ; i--)
@@ -1676,6 +1676,56 @@ static struct android_usb_function mass_storage_function = {
 	.attributes	= mass_storage_function_attributes,
 };
 
+//[ECID:000000] ZTEBSP zhoufan for cdrom 20121009 start
+static int cdrom_function_init(struct android_usb_function *f,
+					struct usb_composite_dev *cdev)
+{
+	int err;
+	struct mass_storage_function_config *config = mass_storage_config;
+	/* initialization is handled by mass_storage_function_init */
+	if (!config)
+		return -1;
+	err = sysfs_create_link(&f->dev->kobj,
+				&config->common->luns[0].dev.kobj,
+				"lun");
+	if (err) {
+		return err;
+	}
+	f->config = config;
+	return 0;
+}
+
+static void cdrom_function_cleanup(struct android_usb_function *f)
+{
+	/* nothing to do - cleanup is handled by mass_storage_function_cleanup */
+}
+
+static int cdrom_function_bind_config(struct android_usb_function *f,
+						struct usb_configuration *c)
+{
+	struct mass_storage_function_config *config = f->config;
+	config->common->luns[0].cdrom = 1;
+	config->common->private_data = f->dev;
+	return fsg_bind_config(c->cdev, c, config->common);
+}
+
+void cdrom_function_unbind_config(struct android_usb_function *f, 
+						struct usb_configuration *c)
+{
+	struct mass_storage_function_config *config = f->config;
+	config->common->luns[0].cdrom = 0;
+	config->common->private_data = NULL;
+}
+
+static struct android_usb_function cdrom_function = {
+	.name		= "cdrom",
+	.init		= cdrom_function_init,
+	.cleanup	= cdrom_function_cleanup,
+	.bind_config	= cdrom_function_bind_config,
+	.unbind_config	= cdrom_function_unbind_config,
+	.attributes	= mass_storage_function_attributes,
+};
+//[ECID:000000] ZTEBSP zhoufan for cdrom 20121009 end
 
 static int accessory_function_init(struct android_usb_function *f,
 					struct usb_composite_dev *cdev)
@@ -1839,6 +1889,9 @@ static struct android_usb_function *supported_functions[] = {
 #endif
 	&rndis_qc_function,
 	&mass_storage_function,
+//[ECID:000000] ZTEBSP zhoufan for cdrom 20121009 start
+	&cdrom_function,
+//[ECID:000000] ZTEBSP zhoufan for cdrom 20121009 end
 	&accessory_function,
 	&audio_source_function,
 	&uasp_function,

@@ -4315,6 +4315,21 @@ msmsdcc_slot_status(struct msmsdcc_host *host)
 	int status;
 	unsigned int gpio_no = host->plat->status_gpio;
 
+//[ECID:000000] ZTEBSP wangxiaomei 20120714 start, for sd card hw dectect
+	//int gpio_sdc1_hw_det=26
+	if (host->plat->is_status_gpio_active_low)
+	status = gpio_tlmm_config(GPIO_CFG(gpio_no, 2, GPIO_CFG_INPUT,
+				GPIO_CFG_PULL_UP, GPIO_CFG_8MA),
+				GPIO_CFG_ENABLE);
+	else
+			status = gpio_tlmm_config(GPIO_CFG(gpio_no, 2, GPIO_CFG_INPUT,
+				GPIO_CFG_PULL_DOWN, GPIO_CFG_8MA),
+				GPIO_CFG_ENABLE);
+		if (status)
+		pr_err("%s:Failed to configure tlmm for GPIO %d\n", __func__,
+				gpio_no);
+//[ECID:000000] ZTEBSP wangxiaomei 20120714 end, for sd card hw dectect
+
 	status = gpio_request(gpio_no, "SD_HW_Detect");
 	if (status) {
 		pr_err("%s: %s: Failed to request GPIO %d\n",
