@@ -84,17 +84,17 @@ obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35510) += mipi_NT35510.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35516) += mipi_truly_tft540960_1_e.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35590) += mipi_NT35590.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_SIMULATOR) += mipi_simulator.o
-obj-$(CONFIG_ZTEMT_LCD_V5) += mipi_zte_sharp.o mipi_zte_sharp_video_1080p.o v5_disp_incr.o
+#obj-$(CONFIG_ZTEMT_LCD_V5) += mipi_zte_sharp.o mipi_zte_sharp_video_1080p.o v5_disp_incr.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_SHARP) += mipi_sharp.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_ORISE_BOE) += mipi_orise_boe.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_ORISE_CPT) += mipi_orise_cpt.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_ORISE_LEAD) += mipi_orise_lead.o
 
-ifeq ($(CONFIG_ZTEMT_LCD_CMD_MODE),y)
-obj-$(CONFIG_ZTEMT_LCD_Z5MINI)+= mipi_zte_z5mini_lcd.o  mipi_zte_sharp_cmd_720p_r69431.o mipi_zte_sharp_cmd_720p_nt35590.o mipi_zte_sharp_video_720p_r63415.o mipi_zte_tianma_video_720p_otm1282a.o v5_disp_incr.o
-else
-obj-$(CONFIG_ZTEMT_LCD_Z5MINI)+= mipi_zte_z5mini_lcd.o  mipi_zte_sharp_video_720p_nt35590.o mipi_zte_sharp_video_720p_r63415.o mipi_zte_sharp_video_720p_r69431.o mipi_zte_tianma_video_720p_otm1282a.o v5_disp_incr.o
-endif
+#ifeq ($(CONFIG_ZTEMT_LCD_CMD_MODE),y)
+#obj-$(CONFIG_ZTEMT_LCD_Z5MINI)+= mipi_zte_z5mini_lcd.o  mipi_zte_sharp_cmd_720p_r69431.o mipi_zte_sharp_cmd_720p_nt35590.o mipi_zte_sharp_video_720p_r63415.o mipi_zte_tianma_video_720p_otm1282a.o v5_disp_incr.o
+#else
+#obj-$(CONFIG_ZTEMT_LCD_Z5MINI)+= mipi_zte_z5mini_lcd.o  mipi_zte_sharp_video_720p_nt35590.o mipi_zte_sharp_video_720p_r63415.o mipi_zte_sharp_video_720p_r69431.o mipi_zte_tianma_video_720p_otm1282a.o v5_disp_incr.o
+#endif
 
 # MIPI Bridge
 obj-$(CONFIG_FB_MSM_MIPI_DSI_TC358764_DSI2LVDS) += mipi_tc358764_dsi2lvds.o
@@ -131,6 +131,10 @@ obj-$(CONFIG_FB_MSM_MDDI_QUICKVX) += mddi_quickvx.o
 endif
 
 ifeq ($(CONFIG_FB_MSM_MIPI_PANEL_DETECT),y)
+#/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 start*/
+obj-y += mipi_toshiba_attri_pt.o
+obj-y += mipi_tc358762_dsi2rgb.o
+#/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 end*/
 obj-y += mipi_toshiba_video_wvga_pt.o mipi_toshiba_video_wsvga_pt.o mipi_toshiba_video_wuxga.o
 obj-y += mipi_novatek_video_qhd_pt.o mipi_novatek_cmd_qhd_pt.o
 obj-y += mipi_orise_video_720p_pt.o mipi_orise_cmd_720p_pt.o
@@ -142,6 +146,10 @@ obj-y += mipi_chimei_wxga_pt.o
 obj-y += mipi_chimei_wuxga.o
 obj-y += mipi_truly_video_wvga_pt.o
 else
+#/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 start*/
+obj-y += mipi_toshiba_attri_pt.o
+obj-y += mipi_tc358762_dsi2rgb.o
+#/*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213 end*/
 obj-$(CONFIG_FB_MSM_MIPI_TOSHIBA_VIDEO_WVGA_PT) += mipi_toshiba_video_wvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_TOSHIBA_VIDEO_WSVGA_PT) += mipi_toshiba_video_wsvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_TOSHIBA_VIDEO_WUXGA) += mipi_toshiba_video_wuxga.o

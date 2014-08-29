@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,10 +11,9 @@
  *
  */
 
-#ifndef MIPI_NT35590_H
-#define MIPI_NT35590_H
+#ifndef MIPI_TC358762_DSI2RGB_H
+#define MIPI_TC358762_DSI2RGB_H
 
-int mipi_nt35590_device_register(struct msm_panel_info *pinfo,
-					u32 channel, u32 panel);
-
-#endif  /* MIPI_NT35590_H */
+int mipi_tc358762_dsi2rgb_register(struct msm_panel_info *pinfo,
+	u32 channel_id, u32 panel_id);
+#endif  /* MIPI_TC358762_DSI2RGB_H */
