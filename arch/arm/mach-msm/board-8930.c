@@ -2296,7 +2296,7 @@ static struct platform_device msm_device_saw_core0 = {
 	.name	= "saw-regulator",
 	.id	= 0,
 	.dev	= {
-		.platform_data = &msm8930_pm8038_saw_regulator_core0_pdata,
+		.platform_data = &msm8930_saw_regulator_core0_pdata,
 	},
 };
 
@@ -2304,7 +2304,7 @@ static struct platform_device msm_device_saw_core1 = {
 	.name	= "saw-regulator",
 	.id	= 1,
 	.dev	= {
-		.platform_data = &msm8930_pm8038_saw_regulator_core1_pdata,
+		.platform_data = &msm8930_saw_regulator_core1_pdata,
 	},
 };
 
@@ -2361,8 +2361,8 @@ static struct platform_device msm8930_device_ext_5v_vreg __devinitdata = {
 	.name	= GPIO_REGULATOR_DEV_NAME,
 	.id	= 63,
 	.dev	= {
-		.platform_data = &msm8930_pm8038_gpio_regulator_pdata[
-					MSM8930_GPIO_VREG_ID_EXT_5V],
+		.platform_data =
+		     &msm8930_gpio_regulator_pdata[MSM8930_GPIO_VREG_ID_EXT_5V],
 	},
 };
 
@@ -2370,8 +2370,8 @@ static struct platform_device msm8930_device_ext_otg_sw_vreg __devinitdata = {
 	.name	= GPIO_REGULATOR_DEV_NAME,
 	.id	= 97,
 	.dev	= {
-		.platform_data = &msm8930_pm8038_gpio_regulator_pdata[
-					MSM8930_GPIO_VREG_ID_EXT_OTG_SW],
+		.platform_data =
+		 &msm8930_gpio_regulator_pdata[MSM8930_GPIO_VREG_ID_EXT_OTG_SW],
 	},
 };
 
@@ -2384,7 +2384,7 @@ static struct platform_device msm8930_device_rpm_regulator __devinitdata = {
 #ifndef MSM8930_PHASE_2
 		.platform_data = &msm_rpm_regulator_pdata,
 #else
-		.platform_data = &msm8930_pm8038_rpm_regulator_pdata,
+		.platform_data = &msm8930_rpm_regulator_pdata,
 #endif
 	},
 };
