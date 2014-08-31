@@ -1197,11 +1197,9 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	if (mdesc->map_io)
 		mdesc->map_io();
 	fill_pmd_gaps();
-
+/*
 	if (use_user_accessible_timers()) {
-		/*
-		 * Generate a mapping for the timer page.
-		 */
+		
 		int page_addr = get_timer_page_address();
 		if (page_addr != ARM_USER_ACCESSIBLE_TIMERS_INVALID_PAGE) {
 			map.pfn = __phys_to_pfn(page_addr);
@@ -1211,7 +1209,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 			create_mapping(&map);
 		}
 	}
-
+*/
 	/*
 	 * Finally flush the caches and tlb to ensure that we're in a
 	 * consistent state wrt the writebuffer.  This also ensures that
