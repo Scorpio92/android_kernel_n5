@@ -116,6 +116,7 @@ static struct platform_device msm_fm_platform_init = {
 
 #define KS8851_RST_GPIO		89
 #define KS8851_IRQ_GPIO		90
+#define HAP_SHIFT_LVL_OE_GPIO	47
 
 #define MHL_GPIO_INT            4
 #define MHL_GPIO_RESET          15
@@ -1068,12 +1069,6 @@ static struct msm_bus_vectors qseecom_clks_init_vectors[] = {
 		.ab = 0,
 	},
 	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_SPS,
-		.ib = 0,
-		.ab = 0,
-	},
-	{
 		.src = MSM_BUS_MASTER_SPDM,
 		.dst = MSM_BUS_SLAVE_SPDM,
 		.ib = 0,
@@ -1089,12 +1084,6 @@ static struct msm_bus_vectors qseecom_enable_dfab_vectors[] = {
 		.ab = (492 * 8) *  100000UL,
 	},
 	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_SPS,
-		.ib = (492 * 8) * 1000000UL,
-		.ab = (492 * 8) * 100000UL,
-	},
-	{
 		.src = MSM_BUS_MASTER_SPDM,
 		.dst = MSM_BUS_SLAVE_SPDM,
 		.ib = 0,
@@ -1108,33 +1097,6 @@ static struct msm_bus_vectors qseecom_enable_sfpb_vectors[] = {
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ib = 0,
 		.ab = 0,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_SPS,
-		.ib = 0,
-		.ab = 0,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPDM,
-		.dst = MSM_BUS_SLAVE_SPDM,
-		.ib = (64 * 8) * 1000000UL,
-		.ab = (64 * 8) *  100000UL,
-	},
-};
-
-static struct msm_bus_vectors qseecom_enable_dfab_sfpb_vectors[] = {
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ib = (492 * 8) * 1000000UL,
-		.ab = (492 * 8) *  100000UL,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_SPS,
-		.ib = (492 * 8) * 1000000UL,
-		.ab = (492 * 8) * 100000UL,
 	},
 	{
 		.src = MSM_BUS_MASTER_SPDM,
@@ -1156,10 +1118,6 @@ static struct msm_bus_paths qseecom_hw_bus_scale_usecases[] = {
 	{
 		ARRAY_SIZE(qseecom_enable_sfpb_vectors),
 		qseecom_enable_sfpb_vectors,
-	},
-	{
-		ARRAY_SIZE(qseecom_enable_dfab_sfpb_vectors),
-		qseecom_enable_dfab_sfpb_vectors,
 	},
 };
 
@@ -1515,7 +1473,7 @@ static struct msm_otg_platform_data msm_otg_pdata;
 static int wr_phy_init_seq[] = {
 	0x44, 0x80, /* set VBUS valid threshold
 			and disconnect valid threshold */
-	0x38, 0x81, /* update DC voltage level */
+	0x68, 0x81, /* update DC voltage level */
 	0x14, 0x82, /* set preemphasis and rise/fall time */
 	0x13, 0x83, /* set source impedance adjusment */
 	-1};
@@ -1523,17 +1481,9 @@ static int wr_phy_init_seq[] = {
 static int liquid_v1_phy_init_seq[] = {
 	0x44, 0x80,/* set VBUS valid threshold
 			and disconnect valid threshold */
-	0x3C, 0x81,/* update DC voltage level */
+	0x6C, 0x81,/* update DC voltage level */
 	0x18, 0x82,/* set preemphasis and rise/fall time */
 	0x23, 0x83,/* set source impedance sdjusment */
-	-1};
-
-static int sglte_phy_init_seq[] = {
-	0x44, 0x80, /* set VBUS valid threshold
-			and disconnect valid threshold */
-	0x3A, 0x81, /* update DC voltage level */
-	0x24, 0x82, /* set preemphasis and rise/fall time */
-	0x13, 0x83, /* set source impedance adjusment */
 	-1};
 
 #ifdef CONFIG_MSM_BUS_SCALING
@@ -1689,13 +1639,6 @@ static uint8_t spm_retention_cmd_sequence[] __initdata = {
 			0x0B, 0x00, 0x0f,
 };
 
-static uint8_t spm_retention_with_krait_v3_cmd_sequence[] __initdata = {
-	0x42, 0x1B, 0x00,
-	0x05, 0x03, 0x0D, 0x0B,
-	0x00, 0x42, 0x1B,
-	0x0f,
-};
-
 static uint8_t spm_power_collapse_without_rpm[] __initdata = {
 			0x00, 0x24, 0x54, 0x10,
 			0x09, 0x03, 0x01,
@@ -1710,21 +1653,6 @@ static uint8_t spm_power_collapse_with_rpm[] __initdata = {
 			0x24, 0x30, 0x0f,
 };
 
-/* 8960AB has a different command to assert apc_pdn */
-static uint8_t spm_power_collapse_without_rpm_krait_v3[] __initdata = {
-	0x00, 0x30, 0x24, 0x30,
-	0x84, 0x10, 0x09, 0x03,
-	0x01, 0x10, 0x84, 0x30,
-	0x0C, 0x24, 0x30, 0x0f,
-};
-
-static uint8_t spm_power_collapse_with_rpm_krait_v3[] __initdata = {
-	0x00, 0x30, 0x24, 0x30,
-	0x84, 0x10, 0x09, 0x07,
-	0x01, 0x0B, 0x10, 0x84,
-	0x30, 0x0C, 0x24, 0x30,
-	0x0f,
-};
 
 static struct msm_spm_seq_entry msm_spm_boot_cpu_seq_list[] __initdata = {
 	[0] = {
@@ -1782,13 +1710,13 @@ static struct msm_spm_platform_data msm_spm_data[] __initdata = {
 		.reg_base_addr = MSM_SAW0_BASE,
 		.reg_init_values[MSM_SPM_REG_SAW2_CFG] = 0x1F,
 #if defined(CONFIG_MSM_AVS_HW)
-		.reg_init_values[MSM_SPM_REG_SAW2_AVS_CTL] = 0x58589464,
-		.reg_init_values[MSM_SPM_REG_SAW2_AVS_HYSTERESIS] = 0x00020000,
+		.reg_init_values[MSM_SPM_REG_SAW2_AVS_CTL] = 0x00,
+		.reg_init_values[MSM_SPM_REG_SAW2_AVS_HYSTERESIS] = 0x00,
 #endif
 		.reg_init_values[MSM_SPM_REG_SAW2_SPM_CTL] = 0x01,
-		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x03020004,
-		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_0] = 0x0084009C,
-		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_1] = 0x00A4001C,
+		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x02020204,
+		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_0] = 0x0060009C,
+		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_1] = 0x0000001C,
 		.vctl_timeout_us = 50,
 		.num_modes = ARRAY_SIZE(msm_spm_boot_cpu_seq_list),
 		.modes = msm_spm_boot_cpu_seq_list,
@@ -1797,13 +1725,13 @@ static struct msm_spm_platform_data msm_spm_data[] __initdata = {
 		.reg_base_addr = MSM_SAW1_BASE,
 		.reg_init_values[MSM_SPM_REG_SAW2_CFG] = 0x1F,
 #if defined(CONFIG_MSM_AVS_HW)
-		.reg_init_values[MSM_SPM_REG_SAW2_AVS_CTL] = 0x58589464,
-		.reg_init_values[MSM_SPM_REG_SAW2_AVS_HYSTERESIS] = 0x00020000,
+		.reg_init_values[MSM_SPM_REG_SAW2_AVS_CTL] = 0x00,
+		.reg_init_values[MSM_SPM_REG_SAW2_AVS_HYSTERESIS] = 0x00,
 #endif
 		.reg_init_values[MSM_SPM_REG_SAW2_SPM_CTL] = 0x01,
-		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x03020004,
-		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_0] = 0x0084009C,
-		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_1] = 0x00A4001C,
+		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x02020204,
+		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_0] = 0x0060009C,
+		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_1] = 0x0000001C,
 		.vctl_timeout_us = 50,
 		.num_modes = ARRAY_SIZE(msm_spm_nonboot_cpu_seq_list),
 		.modes = msm_spm_nonboot_cpu_seq_list,
@@ -1858,8 +1786,6 @@ static struct msm_spm_platform_data msm_spm_l2_data[] __initdata = {
 	},
 };
 
-#define HAP_SHIFT_LVL_OE_GPIO		47
-#define HAP_SHIFT_LVL_OE_GPIO_SGLTE	89
 #define PM_HAP_EN_GPIO		PM8921_GPIO_PM_TO_SYS(33)
 #define PM_HAP_LEN_GPIO		PM8921_GPIO_PM_TO_SYS(20)
 
@@ -1868,13 +1794,8 @@ static struct msm_xo_voter *xo_handle_d1;
 static int isa1200_power(int on)
 {
 	int rc = 0;
-	int hap_oe_gpio = HAP_SHIFT_LVL_OE_GPIO;
 
-	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE)
-		hap_oe_gpio = HAP_SHIFT_LVL_OE_GPIO_SGLTE;
-
-
-	gpio_set_value(hap_oe_gpio, !!on);
+	gpio_set_value(HAP_SHIFT_LVL_OE_GPIO, !!on);
 
 	rc = on ? msm_xo_mode_vote(xo_handle_d1, MSM_XO_MODE_ON) :
 			msm_xo_mode_vote(xo_handle_d1, MSM_XO_MODE_OFF);
@@ -1887,14 +1808,13 @@ static int isa1200_power(int on)
 	return 0;
 
 err_xo_vote:
-	gpio_set_value(hap_oe_gpio, !on);
+	gpio_set_value(HAP_SHIFT_LVL_OE_GPIO, !on);
 	return rc;
 }
 
 static int isa1200_dev_setup(bool enable)
 {
 	int rc = 0;
-	int hap_oe_gpio = HAP_SHIFT_LVL_OE_GPIO;
 
 	struct pm_gpio hap_gpio_config = {
 		.direction      = PM_GPIO_DIR_OUT,
@@ -1906,9 +1826,6 @@ static int isa1200_dev_setup(bool enable)
 		.output_buffer  = PM_GPIO_OUT_BUF_CMOS,
 		.output_value   = 0,
 	};
-
-	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE)
-		hap_oe_gpio = HAP_SHIFT_LVL_OE_GPIO_SGLTE;
 
 	if (enable == true) {
 		rc = pm8xxx_gpio_config(PM_HAP_EN_GPIO, &hap_gpio_config);
@@ -1925,14 +1842,14 @@ static int isa1200_dev_setup(bool enable)
 			return rc;
 		}
 
-		rc = gpio_request(hap_oe_gpio, "hap_shft_lvl_oe");
+		rc = gpio_request(HAP_SHIFT_LVL_OE_GPIO, "hap_shft_lvl_oe");
 		if (rc) {
 			pr_err("%s: unable to request gpio %d (%d)\n",
-					__func__, hap_oe_gpio, rc);
+					__func__, HAP_SHIFT_LVL_OE_GPIO, rc);
 			return rc;
 		}
 
-		rc = gpio_direction_output(hap_oe_gpio, 0);
+		rc = gpio_direction_output(HAP_SHIFT_LVL_OE_GPIO, 0);
 		if (rc) {
 			pr_err("%s: Unable to set direction\n", __func__);
 			goto free_gpio;
@@ -1946,7 +1863,7 @@ static int isa1200_dev_setup(bool enable)
 			goto gpio_set_dir;
 		}
 	} else {
-		gpio_free(hap_oe_gpio);
+		gpio_free(HAP_SHIFT_LVL_OE_GPIO);
 
 		msm_xo_put(xo_handle_d1);
 	}
@@ -1954,9 +1871,9 @@ static int isa1200_dev_setup(bool enable)
 	return 0;
 
 gpio_set_dir:
-	gpio_set_value(hap_oe_gpio, 0);
+	gpio_set_value(HAP_SHIFT_LVL_OE_GPIO, 0);
 free_gpio:
-	gpio_free(hap_oe_gpio);
+	gpio_free(HAP_SHIFT_LVL_OE_GPIO);
 	return rc;
 }
 
@@ -2494,7 +2411,7 @@ static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi12_pdata = {
 	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
 };
-
+/*
 static struct ks8851_pdata spi_eth_pdata = {
 	.irq_gpio = KS8851_IRQ_GPIO,
 	.rst_gpio = KS8851_RST_GPIO,
@@ -2510,7 +2427,7 @@ static struct spi_board_info spi_eth_info[] __initdata = {
 		.mode                   = SPI_MODE_0,
 		.platform_data		= &spi_eth_pdata
 	},
-};
+};*/
 static struct spi_board_info spi_board_info[] __initdata = {
 	{
 		.modalias               = "dsi_novatek_3d_panel_spi",
@@ -2551,7 +2468,7 @@ static struct platform_device msm_tsens_device = {
 
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 0,
-	.poll_ms = 250,
+	.poll_ms = 100,
 	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
@@ -2619,17 +2536,7 @@ static struct msm_serial_hs_platform_data msm_uart_dm9_pdata = {
 	.uart_cts_gpio		= 95,
 	.uart_rfr_gpio		= 96,
 };
-
-static struct msm_serial_hs_platform_data msm_uart_dm8_pdata = {
-	.config_gpio		= 4,
-	.uart_tx_gpio		= 34,
-	.uart_rx_gpio		= 35,
-	.uart_cts_gpio		= 36,
-	.uart_rfr_gpio		= 37,
-	.uartdm_rx_buf_size	= 1024,
-};
 #else
-static struct msm_serial_hs_platform_data msm_uart_dm8_pdata;
 static struct msm_serial_hs_platform_data msm_uart_dm9_pdata;
 #endif
 
@@ -2789,6 +2696,7 @@ static void __init bt_power_init(void)
 #endif
 
 static struct platform_device *common_devices[] __initdata = {
+	&msm8960_device_acpuclk,
 	&msm8960_device_dmov,
 	&msm_device_smd,
 	&msm_device_uart_dm6,
@@ -2860,7 +2768,7 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm8960_rpm_device,
 	&msm8960_rpm_log_device,
 	&msm8960_rpm_stat_device,
-	&msm8960_rpm_master_stat_device,
+	//&msm8960_rpm_master_stat_device,
 	&msm_device_tz_log,
 	&coresight_tpiu_device,
 	&coresight_etb_device,
@@ -2878,6 +2786,67 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm_tsens_device,
 	&msm8960_pc_cntr,
 	&msm8960_cpu_slp_status,
+};
+
+static struct platform_device *sim_devices[] __initdata = {
+	&msm8960_device_uart_gsbi5,
+	&msm8960_device_otg,
+	&msm8960_device_gadget_peripheral,
+	&msm_device_hsusb_host,
+	&msm_device_hsic_host,
+	&android_usb_device,
+	&msm_device_vidc,
+	&msm_bus_apps_fabric,
+	&msm_bus_sys_fabric,
+	&msm_bus_mm_fabric,
+	&msm_bus_sys_fpb,
+	&msm_bus_cpss_fpb,
+	&msm_pcm,
+	&msm_multi_ch_pcm,
+	&msm_pcm_routing,
+	&msm_cpudai0,
+	&msm_cpudai1,
+	&msm8960_cpudai_slimbus_2_rx,
+	&msm8960_cpudai_slimbus_2_tx,
+	&msm_cpudai_hdmi_rx,
+	&msm_cpudai_bt_rx,
+	&msm_cpudai_bt_tx,
+	&msm_cpudai_fm_rx,
+	&msm_cpudai_fm_tx,
+	&msm_cpudai_auxpcm_rx,
+	&msm_cpudai_auxpcm_tx,
+	&msm_cpu_fe,
+	&msm_stub_codec,
+	&msm_voice,
+	&msm_voip,
+	&msm_lpa_pcm,
+	&msm_compr_dsp,
+	&msm_cpudai_incall_music_rx,
+	&msm_cpudai_incall_record_rx,
+	&msm_cpudai_incall_record_tx,
+
+#if defined(CONFIG_CRYPTO_DEV_QCRYPTO) || \
+		defined(CONFIG_CRYPTO_DEV_QCRYPTO_MODULE)
+	&qcrypto_device,
+#endif
+
+#if defined(CONFIG_CRYPTO_DEV_QCEDEV) || \
+		defined(CONFIG_CRYPTO_DEV_QCEDEV_MODULE)
+	&qcedev_device,
+#endif
+};
+
+static struct platform_device *rumi3_devices[] __initdata = {
+	&msm8960_device_uart_gsbi5,
+	&msm_kgsl_3d0,
+	&msm_kgsl_2d0,
+	&msm_kgsl_2d1,
+#ifdef CONFIG_MSM_GEMINI
+	&msm8960_gemini_device,
+#endif
+#ifdef CONFIG_MSM_MERCURY
+	&msm8960_mercury_device,
+#endif
 };
 
 static struct platform_device *cdp_devices[] __initdata = {
@@ -2950,42 +2919,15 @@ static void __init msm8960_i2c_init(void)
 
 static void __init msm8960_gfx_init(void)
 {
-	struct kgsl_device_platform_data *kgsl_3d0_pdata =
-		msm_kgsl_3d0.dev.platform_data;
 	uint32_t soc_platform_version = socinfo_get_version();
-
-	/* Fixup data that needs to change based on GPU ID */
-	if (cpu_is_msm8960ab()) {
-		if (SOCINFO_VERSION_MINOR(soc_platform_version) == 0)
-			kgsl_3d0_pdata->chipid = ADRENO_CHIPID(3, 2, 1, 0);
-		else
-			kgsl_3d0_pdata->chipid = ADRENO_CHIPID(3, 2, 1, 1);
-		/* 8960PRO nominal clock rate is 320Mhz */
-		kgsl_3d0_pdata->pwrlevel[1].gpu_freq = 320000000;
-	} else {
-		kgsl_3d0_pdata->iommu_count = 1;
-		if (SOCINFO_VERSION_MAJOR(soc_platform_version) == 1) {
-			kgsl_3d0_pdata->pwrlevel[0].gpu_freq = 320000000;
-			kgsl_3d0_pdata->pwrlevel[1].gpu_freq = 266667000;
-		}
-		if (SOCINFO_VERSION_MAJOR(soc_platform_version) >= 3) {
-			/* 8960v3 GPU registers returns 5 for patch release
-			 * but it should be 6, so dummy up the chipid here
-			 * based the platform type
-			 */
-			kgsl_3d0_pdata->chipid = ADRENO_CHIPID(2, 2, 0, 6);
-		}
-	}
-
-	/* Register the 3D core */
-	platform_device_register(&msm_kgsl_3d0);
-
-	/* Register the 2D cores if we are not 8960PRO */
-	if (!cpu_is_msm8960ab()) {
-		platform_device_register(&msm_kgsl_2d0);
-		platform_device_register(&msm_kgsl_2d1);
+	if (SOCINFO_VERSION_MAJOR(soc_platform_version) == 1) {
+		struct kgsl_device_platform_data *kgsl_3d0_pdata =
+				msm_kgsl_3d0.dev.platform_data;
+		kgsl_3d0_pdata->pwrlevel[0].gpu_freq = 320000000;
+		kgsl_3d0_pdata->pwrlevel[1].gpu_freq = 266667000;
 	}
 }
+
 
 static struct msm_rpmrs_level msm_rpmrs_levels[] = {
 	{
@@ -3099,11 +3041,11 @@ struct i2c_registry {
 	int                    len;
 };
 
-/* AVTimer */
+/* AVTimer *//*
 static struct platform_device msm_dev_avtimer_device = {
 	.name = "dev_avtimer",
 	.dev = { .platform_data = &dev_avtimer_pdata },
-};
+};*/
 
 /* Sensors DSPS platform data */
 #ifdef CONFIG_MSM_DSPS
@@ -3264,6 +3206,10 @@ static void __init register_i2c_devices(void)
 	/* Build the matching 'supported_machs' bitmask */
 	if (machine_is_msm8960_cdp())
 		mach_mask = I2C_SURF;
+	else if (machine_is_msm8960_rumi3())
+		mach_mask = I2C_RUMI;
+	else if (machine_is_msm8960_sim())
+		mach_mask = I2C_SIM;
 	else if (machine_is_msm8960_fluid())
 		mach_mask = I2C_FLUID;
 	else if (machine_is_msm8960_liquid())
@@ -3305,52 +3251,71 @@ static void __init register_i2c_devices(void)
 #endif
 }
 
-static void __init msm8960_tsens_init(void)
+static void __init msm8960_sim_init(void)
 {
-	if (cpu_is_msm8960())
-		if (SOCINFO_VERSION_MAJOR(socinfo_get_version()) == 1)
-			return;
+	struct msm_watchdog_pdata *wdog_pdata = (struct msm_watchdog_pdata *)
+		&msm8960_device_watchdog.dev.platform_data;
 
+	wdog_pdata->bark_time = 15000;
 	msm_tsens_early_init(&msm_tsens_pdata);
+	msm_thermal_init(&msm_thermal_pdata);
+	BUG_ON(msm_rpm_init(&msm8960_rpm_data));
+	BUG_ON(msm_rpmrs_levels_init(&msm_rpmrs_data));
+	regulator_suppress_info_printing();
+	platform_device_register(&msm8960_device_rpm_regulator);
+	msm_clock_init(&msm8960_clock_init_data);
+	msm8960_init_pmic();
+
+	msm8960_device_otg.dev.platform_data = &msm_otg_pdata;
+	msm8960_init_gpiomux();
+	msm8960_i2c_init();
+	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
+	msm_spm_l2_init(msm_spm_l2_data);
+	msm8960_init_buses();
+	platform_add_devices(common_devices, ARRAY_SIZE(common_devices));
+	msm8960_pm8921_gpio_mpp_init();
+	platform_add_devices(sim_devices, ARRAY_SIZE(sim_devices));
+
+	msm8960_device_qup_spi_gsbi1.dev.platform_data =
+				&msm8960_qup_spi_gsbi1_pdata;
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+
+	msm8960_init_mmc();
+	msm8960_init_fb();
+	slim_register_board_info(msm_slim_devices,
+		ARRAY_SIZE(msm_slim_devices));
+	BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
+	//msm_pm_init_sleep_status_data(&msm_pm_slp_sts_data);
 }
 
-static void __init msm8960ab_update_krait_spm(void)
- {
- 	int i;
- 
-
-	/* Update the SPM sequences for SPC and PC */
-	for (i = 0; i < ARRAY_SIZE(msm_spm_data); i++) {
-		int j;
-		struct msm_spm_platform_data *pdata = &msm_spm_data[i];
-		for (j = 0; j < pdata->num_modes; j++) {
-			if (pdata->modes[j].cmd ==
-					spm_power_collapse_without_rpm)
-				pdata->modes[j].cmd =
-				spm_power_collapse_without_rpm_krait_v3;
-			else if (pdata->modes[j].cmd ==
-					spm_power_collapse_with_rpm)
-				pdata->modes[j].cmd =
-				spm_power_collapse_with_rpm_krait_v3;
-		}
-	}
-}
-
-static void __init msm8960ab_update_retention_spm(void)
+static void __init msm8960_rumi3_init(void)
 {
-	int i;
+	msm_tsens_early_init(&msm_tsens_pdata);
+	msm_thermal_init(&msm_thermal_pdata);
+	BUG_ON(msm_rpm_init(&msm8960_rpm_data));
+	BUG_ON(msm_rpmrs_levels_init(&msm_rpmrs_data));
+	regulator_suppress_info_printing();
+	platform_device_register(&msm8960_device_rpm_regulator);
+	msm8960_init_gpiomux();
+	msm8960_init_pmic();
+	msm8960_device_qup_spi_gsbi1.dev.platform_data =
+				&msm8960_qup_spi_gsbi1_pdata;
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+	msm8960_i2c_init();
+	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
+	msm_spm_l2_init(msm_spm_l2_data);
+	platform_add_devices(common_devices, ARRAY_SIZE(common_devices));
+	msm8960_pm8921_gpio_mpp_init();
+	platform_add_devices(rumi3_devices, ARRAY_SIZE(rumi3_devices));
+	msm8960_init_mmc();
+	register_i2c_devices();
 
-	/* Update the SPM sequences for krait retention on all cores */
-	for (i = 0; i < ARRAY_SIZE(msm_spm_data); i++) {
-		int j;
-		struct msm_spm_platform_data *pdata = &msm_spm_data[i];
-		for (j = 0; j < pdata->num_modes; j++) {
-			if (pdata->modes[j].cmd ==
-					spm_retention_cmd_sequence)
-				pdata->modes[j].cmd =
-				spm_retention_with_krait_v3_cmd_sequence;
-		}
-	}
+
+	msm8960_init_fb();
+	slim_register_board_info(msm_slim_devices,
+		ARRAY_SIZE(msm_slim_devices));
+	BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
+	//msm_pm_init_sleep_status_data(&msm_pm_slp_sts_data);
 }
 
 static void __init msm8960_cdp_init(void)
@@ -3358,8 +3323,7 @@ static void __init msm8960_cdp_init(void)
 	if (meminfo_init(SYS_MEMORY, SZ_256M) < 0)
 		pr_err("meminfo_init() failed!\n");
 
-	platform_device_register(&msm_gpio_device);
-	msm8960_tsens_init();
+	msm_tsens_early_init(&msm_tsens_pdata);
 	msm_thermal_init(&msm_thermal_pdata);
 	BUG_ON(msm_rpm_init(&msm8960_rpm_data));
 	BUG_ON(msm_rpmrs_levels_init(&msm_rpmrs_data));
@@ -3367,7 +3331,6 @@ static void __init msm8960_cdp_init(void)
 	regulator_suppress_info_printing();
 	if (msm_xo_init())
 		pr_err("Failed to initialize XO votes\n");
-	configure_msm8960_power_grid();
 	platform_device_register(&msm8960_device_rpm_regulator);
 	msm_clock_init(&msm8960_clock_init_data);
 	if (machine_is_msm8960_liquid())
@@ -3375,14 +3338,7 @@ static void __init msm8960_cdp_init(void)
 	msm8960_device_otg.dev.platform_data = &msm_otg_pdata;
 	if (machine_is_msm8960_mtp() || machine_is_msm8960_fluid() ||
 		machine_is_msm8960_cdp()) {
-		/* Due to availability of USB Switch in SGLTE Platform
-		 * it requires different HSUSB PHY settings compare to
-		 * 8960 MTP/CDP platform.
-		 */
-		if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE)
-			msm_otg_pdata.phy_init_seq = sglte_phy_init_seq;
-		else
-			msm_otg_pdata.phy_init_seq = wr_phy_init_seq;
+		msm_otg_pdata.phy_init_seq = wr_phy_init_seq;
 	} else if (machine_is_msm8960_liquid()) {
 			msm_otg_pdata.phy_init_seq =
 				liquid_v1_phy_init_seq;
@@ -3397,34 +3353,17 @@ static void __init msm8960_cdp_init(void)
 	msm8960_device_qup_spi_gsbi1.dev.platform_data =
 				&msm8960_qup_spi_gsbi1_pdata;
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
-	if (socinfo_get_platform_subtype() != PLATFORM_SUBTYPE_SGLTE)
-		spi_register_board_info(spi_eth_info, ARRAY_SIZE(spi_eth_info));
 
 	msm8960_init_pmic();
-	if (machine_is_msm8960_liquid() || (machine_is_msm8960_mtp() &&
-		(socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE ||
-			cpu_is_msm8960ab())))
+	if ((SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 2 &&
+		(machine_is_msm8960_mtp())) || machine_is_msm8960_liquid())
 		msm_isa1200_board_info[0].platform_data = &isa1200_1_pdata;
 	msm8960_i2c_init();
 	msm8960_gfx_init();
- 	if (cpu_is_msm8960ab())
-		msm8960ab_update_krait_spm();
-	if (cpu_is_krait_v3()) {
-		msm_pm_set_tz_retention_flag(0);
-		msm8960ab_update_retention_spm();
-	} else {
-		msm_pm_set_tz_retention_flag(1);
-	}
 	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
 	msm_spm_l2_init(msm_spm_l2_data);
 	msm8960_init_buses();
-	if (cpu_is_msm8960ab()) {
-		platform_add_devices(msm8960ab_footswitch,
-				     msm8960ab_num_footswitch);
-	} else {
-		platform_add_devices(msm8960_footswitch,
-				     msm8960_num_footswitch);
-	}
+	platform_add_devices(msm8960_footswitch, msm8960_num_footswitch);
 	if (machine_is_msm8960_liquid())
 		platform_device_register(&msm8960_device_ext_3p3v_vreg);
 	if (machine_is_msm8960_cdp())
@@ -3439,27 +3378,10 @@ static void __init msm8960_cdp_init(void)
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
 		msm_uart_dm9_pdata.wakeup_irq = gpio_to_irq(94); /* GSBI9(2) */
 		msm_device_uart_dm9.dev.platform_data = &msm_uart_dm9_pdata;
-		platform_device_register(&msm_device_uart_dm9);
 	}
 
-	/* For 8960 Standalone External Bluetooth Interface */
-	if (socinfo_get_platform_subtype() != PLATFORM_SUBTYPE_SGLTE) {
-		msm_device_uart_dm8.dev.platform_data = &msm_uart_dm8_pdata;
-		platform_device_register(&msm_device_uart_dm8);
-	}
-	if (cpu_is_msm8960ab())
-		platform_device_register(&msm8960ab_device_acpuclk);
-	else
-		platform_device_register(&msm8960_device_acpuclk);
 	platform_add_devices(common_devices, ARRAY_SIZE(common_devices));
-	msm8960_add_vidc_device();
-
 	msm8960_pm8921_gpio_mpp_init();
-	/* Don't add modem devices on APQ targets */
-	if (socinfo_get_id() != 124) {
-		platform_device_register(&msm_8960_q6_mss_fw);
-		platform_device_register(&msm_8960_q6_mss_sw);
-	}
 	platform_add_devices(cdp_devices, ARRAY_SIZE(cdp_devices));
 	msm8960_init_smsc_hub();
 	msm8960_init_hsic();
@@ -3474,17 +3396,38 @@ static void __init msm8960_cdp_init(void)
 	slim_register_board_info(msm_slim_devices,
 		ARRAY_SIZE(msm_slim_devices));
 	msm8960_init_dsps();
+	//change_memory_power = &msm8960_change_memory_power;
 	BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
-	bt_power_init();
+	//msm_pm_init_sleep_status_data(&msm_pm_slp_sts_data);
 	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
 		mdm_sglte_device.dev.platform_data = &sglte_platform_data;
 		platform_device_register(&mdm_sglte_device);
 	}
-	if (machine_is_msm8960_mtp() || machine_is_msm8960_fluid() ||
-		machine_is_msm8960_cdp()) {
-		platform_device_register(&msm_dev_avtimer_device);
-	}
 }
+
+MACHINE_START(MSM8960_SIM, "QCT MSM8960 SIMULATOR")
+	.map_io = msm8960_map_io,
+	.reserve = msm8960_reserve,
+	.init_irq = msm8960_init_irq,
+	.handle_irq = gic_handle_irq,
+	.timer = &msm_timer,
+	.init_machine = msm8960_sim_init,
+	.init_early = msm8960_allocate_memory_regions,
+	.init_very_early = msm8960_early_memory,
+	.restart = msm_restart,
+MACHINE_END
+
+MACHINE_START(MSM8960_RUMI3, "QCT MSM8960 RUMI3")
+	.map_io = msm8960_map_io,
+	.reserve = msm8960_reserve,
+	.init_irq = msm8960_init_irq,
+	.handle_irq = gic_handle_irq,
+	.timer = &msm_timer,
+	.init_machine = msm8960_rumi3_init,
+	.init_early = msm8960_allocate_memory_regions,
+	.init_very_early = msm8960_early_memory,
+	.restart = msm_restart,
+MACHINE_END
 
 MACHINE_START(MSM8960_CDP, "QCT MSM8960 CDP")
 	.map_io = msm8960_map_io,
