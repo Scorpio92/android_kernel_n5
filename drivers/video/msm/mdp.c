@@ -2831,6 +2831,8 @@ static int mdp_probe(struct platform_device *pdev)
 	struct mipi_panel_info *mipi;
 #endif
 
+    static int contSplash_update_done;//Scorpio92
+
 	if ((pdev->id == 0) && (pdev->num_resources > 0)) {
 		mdp_init_pdev = pdev;
 		mdp_pdata = pdev->dev.platform_data;
@@ -2865,6 +2867,8 @@ static int mdp_probe(struct platform_device *pdev)
 
 		if (rc)
 			return rc;
+       
+        mdp_clk_ctrl(1); //Scorpio92
 
 		mdp_hw_version();
 
@@ -2879,6 +2883,10 @@ static int mdp_probe(struct platform_device *pdev)
 #ifdef CONFIG_FB_MSM_OVERLAY
 		mdp_hw_cursor_init();
 #endif
+
+        if (!(mdp_pdata->cont_splash_enabled)) //Scorpio92
+			mdp_clk_ctrl(0); //Scorpio92
+
 		mdp_resource_initialized = 1;
 		return 0;
 	}
@@ -2905,6 +2913,21 @@ static int mdp_probe(struct platform_device *pdev)
 	mfd->pdev = msm_fb_dev;
 	mfd->mdp_rev = mdp_rev;
 	mfd->vsync_init = NULL;
+
+   //Scorpio92 start
+   if (mdp_pdata) {
+		if (mdp_pdata->cont_splash_enabled) {
+			mfd->cont_splash_done = 0;
+			if (!contSplash_update_done) {
+				if (mfd->panel.type == MIPI_VIDEO_PANEL)
+					mdp_pipe_ctrl(MDP_CMD_BLOCK,
+						MDP_BLOCK_POWER_ON, FALSE);
+				contSplash_update_done = 1;
+			}
+		} else
+			mfd->cont_splash_done = 1;
+	}
+    //Scorpio92 end
 
 	mfd->ov0_wb_buf = MDP_ALLOC(sizeof(struct mdp_buf_type));
 	mfd->ov1_wb_buf = MDP_ALLOC(sizeof(struct mdp_buf_type));
@@ -2935,13 +2958,14 @@ static int mdp_probe(struct platform_device *pdev)
 		goto mdp_probe_err;
 	}
 
+    //Scorpio92 start
+    /*
 	if (mdp_pdata) {
 		if (mdp_pdata->cont_splash_enabled &&
 				 mfd->panel_info.pdest == DISPLAY_1) {
 			char *cp;
 			uint32 bpp = 3;
-			/*read panel wxh and calculate splash screen
-			  size*/
+
 			mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 
 			mdp_clk_ctrl(1);
@@ -2982,6 +3006,8 @@ static int mdp_probe(struct platform_device *pdev)
 
 		mfd->cont_splash_done = (1 - mdp_pdata->cont_splash_enabled);
 	}
+    */
+    //Scorpio92 end
 
 	/* data chain */
 	pdata = msm_fb_dev->dev.platform_data;
