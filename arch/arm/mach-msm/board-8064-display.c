@@ -68,6 +68,7 @@ static struct resource msm_fb_resources[] = {
 #define MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME "mipi_video_toshiba_wsvga"
 #define MIPI_VIDEO_CHIMEI_WXGA_PANEL_NAME "mipi_video_chimei_wxga"
 #define HDMI_PANEL_NAME "hdmi_msm"
+#define MHL_PANEL_NAME "hdmi_msm,mhl_8334"
 #define TVOUT_PANEL_NAME "tvout_msm"
 /*[ECID:000000] ZTEBSP shihuiqin, for video_lms501, 20120213*/
 #define MIPI_TOSHIBA_ATTRI_PANEL_NAME  "mipi_video_attri_wxga"
@@ -91,6 +92,13 @@ static unsigned char hdmi_is_primary;
 unsigned char apq8064_hdmi_as_primary_selected(void)
 {
 	return hdmi_is_primary;
+}
+
+static unsigned char mhl_display_enabled;
+
+unsigned char apq8064_mhl_display_enabled(void)
+{
+	return mhl_display_enabled;
 }
 
 static void set_mdp_clocks_for_wuxga(void);
@@ -317,7 +325,10 @@ static struct msm_bus_scale_pdata mdp_bus_scale_pdata = {
 
 static struct msm_panel_common_pdata mdp_pdata = {
 	.gpio = MDP_VSYNC_GPIO,
-	.mdp_max_clk = 200000000,
+	.mdp_max_clk = 266667000,
+	.mdp_max_bw = 2000000000,
+	.mdp_bw_ab_factor = 115,
+	.mdp_bw_ib_factor = 150,
 	.mdp_bus_scale_table = &mdp_bus_scale_pdata,
 	.mdp_rev = MDP_REV_44,
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
@@ -325,7 +336,7 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #else
 	.mem_hid = MEMTYPE_EBI1,
 #endif
-	.cont_splash_enabled=1,//zhangqi add for cont_splash
+	.cont_splash_enabled=0,//zhangqi add for cont_splash
 	.mdp_iommu_split_domain = 1,
 };
 
@@ -1954,9 +1965,17 @@ void __init apq8064_set_display_params(char *prim_panel, char *ext_panel,
 			PANEL_NAME_MAX_LEN);
 		pr_debug("msm_fb_pdata.ext_panel_name %s\n",
 			msm_fb_pdata.ext_panel_name);
+
+		if (!strncmp((char *)msm_fb_pdata.ext_panel_name,
+			MHL_PANEL_NAME, strnlen(MHL_PANEL_NAME,
+				PANEL_NAME_MAX_LEN))) {
+			pr_debug("MHL is external display by boot parameter\n");
+			mhl_display_enabled = 1;
+		}
 	}
 	#if defined(CONFIG_PROJECT_P864A20) || defined(CONFIG_PROJECT_P864G02) 
 	set_mdp_clocks_for_wuxga();//zhangqi add for blue screen test 2012.10.24
 	#endif
 	msm_fb_pdata.ext_resolution = resolution;
+    hdmi_msm_data.is_mhl_enabled = mhl_display_enabled;
 }
