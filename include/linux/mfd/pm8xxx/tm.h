@@ -37,6 +37,7 @@ struct pm8xxx_tm_core_data {
 	char				*tm_name;
 	char				*irq_name_temp_stat;
 	char				*irq_name_over_temp;
+	bool			allow_software_override;
 };
 
 #endif
