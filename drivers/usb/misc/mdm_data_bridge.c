@@ -32,6 +32,16 @@
 #define BRIDGE_DATA_IDX		0
 #define BRIDGE_CTRL_IDX		1
 
+static const char	*data_bridge_names[] = {
+	"dun_data_hsic0",
+//ztebsp zhangjing add for at,++,20121129	
+#if defined(CONFIG_USB_AT)
+	"dun_data_hsic1", 
+#endif
+//ztebsp zhangjing add for at,--,20121129
+	"rmnet_data_hsic0"
+};
+
 /*for xport : HSIC*/
 static const char * const serial_hsic_bridge_names[] = {
 	"serial_hsic_data",
@@ -677,7 +687,8 @@ static int data_bridge_probe(struct usb_interface *iface,
 		return -ENODEV;
 	}
 
-	dev->pdev = platform_device_alloc(name, -1);
+	//dev->pdev = platform_device_alloc(name, -1);
+	dev->pdev = platform_device_alloc(data_bridge_names[id], id);
 	if (!dev->pdev) {
 		err("%s: unable to allocate platform device\n", __func__);
 		kfree(dev);

@@ -864,6 +864,11 @@ static ssize_t serial_xport_names_show(struct device *dev,
 }
 
 static DEVICE_ATTR(transports, S_IWUSR, NULL, serial_transports_store);
+//ztebsp zhangjing add for at,++,20121129	
+#if defined(CONFIG_USB_AT)
+static char max_serial_transports[32]={'h','s','i','c',',','t','t','y',',','h','s','i','c'};//"hsic,tty,hsic";      
+#endif
+//ztebsp zhangjing add for at,--,20121129
 static struct device_attribute dev_attr_serial_xport_names =
 				__ATTR(transport_names, S_IRUGO | S_IWUSR,
 				serial_xport_names_show,
@@ -891,7 +896,13 @@ static int serial_function_bind_config(struct android_usb_function *f,
 		goto bind_config;
 
 	serial_initialized = 1;
+//ztebsp zhangjing add for at,++,20121129	
+#if defined(CONFIG_USB_AT)
+	strlcpy(buf, max_serial_transports, sizeof(buf)); 
+#else
 	strlcpy(buf, serial_transports, sizeof(buf));
+#endif
+//ztebsp zhangjing add for at,--,20121129
 	b = strim(buf);
 
 	strlcpy(xport_name_buf, serial_xport_names, sizeof(xport_name_buf));
@@ -918,6 +929,22 @@ static int serial_function_bind_config(struct android_usb_function *f,
 	}
 
 bind_config:
+//ztebsp zhangjing add for at,++,20121129	
+#if defined(CONFIG_USB_AT)
+
+	strlcpy(buf, serial_transports, sizeof(buf));
+	ports = 0;
+        b = strim(buf);
+
+        while (b) {
+                name = strsep(&b, ",");
+                if (name) {
+                        ports++;
+
+                }
+        }
+#endif
+//ztebsp zhangjing add for at,--,20121129
 	for (i = 0; i < ports; i++) {
 		err = gser_bind_config(c, i);
 		if (err) {

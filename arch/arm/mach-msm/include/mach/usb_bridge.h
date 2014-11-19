@@ -17,7 +17,13 @@
 #include <linux/netdevice.h>
 #include <linux/usb.h>
 
-#define MAX_BRIDGE_DEVICES 4
+//ztebsp zhangjing add for at,++,20121129
+#if defined(CONFIG_USB_AT)
+#define MAX_BRIDGE_DEVICES 3  
+#else
+#define MAX_BRIDGE_DEVICES 2
+#endif
+//ztebsp zhangjing add for at,--,20121129
 #define BRIDGE_NAME_MAX_LEN 20
 
 struct bridge_ops {

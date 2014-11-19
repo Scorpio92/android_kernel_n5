@@ -1059,7 +1059,13 @@ int gser_bind_config(struct usb_configuration *c, u8 port_num)
 	else if (port_num == 1)
 		gser->port.func.name = "nmea";
 	else
+//ztebsp zhangjing add for at,++,20121129	
+#if defined(CONFIG_USB_AT)
+		gser->port.func.name = "at";
+#else
 		gser->port.func.name = "modem2";
+#endif
+//ztebsp zhangjing add for at,--,20121129
 	gser->port.func.setup = gser_setup;
 	gser->port.connect = gser_connect;
 	gser->port.get_dtr = gser_get_dtr;
