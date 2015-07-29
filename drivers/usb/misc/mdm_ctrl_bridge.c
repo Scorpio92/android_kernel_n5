@@ -35,6 +35,16 @@
 
 #define SUSPENDED		BIT(0)
 
+static const char *ctrl_bridge_names[] = {
+	"dun_ctrl_hsic0",
+//ztebsp zhangjing add for at,++,20121129	
+#if defined(CONFIG_USB_AT)
+	"dun_ctrl_hsic1", 
+#endif
+//ztebsp zhangjing add for at,--,20121129
+	"rmnet_ctrl_hsic0"
+};
+
 enum ctrl_bridge_rx_state {
 	RX_IDLE, /* inturb is not queued */
 	RX_WAIT, /* inturb is queued and waiting for data */
@@ -685,7 +695,8 @@ ctrl_bridge_probe(struct usb_interface *ifc, struct usb_host_endpoint *int_in,
 
 	dev->name = name;
 
-	dev->pdev = platform_device_alloc(name, -1);
+	//dev->pdev = platform_device_alloc(name, -1);
+	dev->pdev = platform_device_alloc(ctrl_bridge_names[id], id);
 	if (!dev->pdev) {
 		retval = -ENOMEM;
 		dev_err(&ifc->dev, "%s: unable to allocate platform device\n",

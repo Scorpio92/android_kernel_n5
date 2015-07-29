@@ -79,8 +79,14 @@ enum gadget_type {
 	USB_GADGET_RMNET,
 };
 
-#define NUM_RMNET_HSIC_PORTS 2
-#define NUM_DUN_HSIC_PORTS 2
+#define NUM_RMNET_HSIC_PORTS 1
+//ztebsp zhangjing add for at,++,20121129
+#if defined(CONFIG_USB_AT)
+#define NUM_DUN_HSIC_PORTS 2   //   1//zhangjing 
+#else
+#define NUM_DUN_HSIC_PORTS 1
+#endif
+//ztebsp zhangjing add for at,--,20121129
 #define NUM_PORTS (NUM_RMNET_HSIC_PORTS \
 	+ NUM_DUN_HSIC_PORTS)
 
